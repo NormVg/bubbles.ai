@@ -1,0 +1,25 @@
+{
+  "name": "discord-deploy",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/NormVg/discord-deploy.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "bugs": {
+    "url": "https://github.com/NormVg/discord-deploy/issues"
+  },
+  "homepage": "https://github.com/NormVg/discord-deploy#readme",
+  "dependencies": {
+    "discord.js": "^14.26.2",
+    "dotenv": "^17.4.1"
+  }
+}

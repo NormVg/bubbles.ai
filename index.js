@@ -16,6 +16,7 @@ import { get as httpGet } from 'http';
 import config from './config.js';
 import { runAgent } from './agents/orchestrator.js';
 import { getPendingFiles } from './tools/filesystem.js';
+import taskManager from './core/taskManager.js';
 import logger from './core/logger.js';
 
 const execAsync = promisify(exec);
@@ -207,6 +208,18 @@ client.once('clientReady', async () => {
     logger.error('Discord', `Failed to register slash commands: ${err.message}`);
   }
 
+  const banner = `
+  ____        _     _     _
+ |  _ \\      | |   | |   | |
+ | |_) |_   _| |__ | |__ | | ___  ___
+ |  _ <| | | | '_ \\| '_ \\| |/ _ \\/ __|
+ | |_) | |_| | |_) | |_) | |  __/\\__ \\
+ |____/ \\__,_|_.__/|_.__/|_|\\___||___/
+
+        Autonomous Discord Agent
+ `;
+
+  console.log('\n\x1b[36m%s\x1b[0m', banner);
   logger.info('Discord', '── Agent ready ──');
 });
 
@@ -243,6 +256,28 @@ client.on('messageCreate', async (message) => {
 
     logger.info('Discord', `@mention from ${message.author.username}: "${text.slice(0, 80)}..."`);
 
+    let progressMessage = null;
+    let updateQueue = Promise.resolve();
+
+    // Set up the task progress handler (serialized through queue)
+    taskManager.setUpdateHandler((plan) => {
+      updateQueue = updateQueue.then(async () => {
+        try {
+          const summary = taskManager.getFormattedSummary(plan.id);
+          if (!summary) return;
+
+          if (!progressMessage) {
+            progressMessage = await message.reply(summary);
+            logger.debug('Discord', 'Progress message created');
+          } else {
+            await progressMessage.edit(summary);
+          }
+        } catch (err) {
+          logger.warn('Discord', `Failed to update progress message: ${err.message}`);
+        }
+      });
+    });
+
     // Run the agent
     const result = await runAgent(text, {
       extraContext,
@@ -252,7 +287,19 @@ client.on('messageCreate', async (message) => {
       },
     });
 
+    // Clean up task handler & typing
+    taskManager.setUpdateHandler(null);
     clearInterval(typingInterval);
+
+    // Wait for any pending progress updates to finish, then delete
+    await updateQueue;
+    if (progressMessage) {
+      try {
+        await progressMessage.delete();
+      } catch (err) {
+        logger.warn('Discord', `Failed to delete progress message: ${err.message}`);
+      }
+    }
 
     // Collect any files the agent queued for sending
     const filesToSend = getPendingFiles();

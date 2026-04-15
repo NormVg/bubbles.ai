@@ -61,7 +61,7 @@ export function stripFrontmatter(content) {
 export async function discoverSkills() {
   const workDir = resolve(config.WORKING_DIR);
   const directories = [
-    join(workDir, '.agents', 'skills'),
+    join(workDir, '.bubbles', 'skills'),
     join(workDir, '.agent', 'skills'),
     join(workDir, '_agents', 'skills'),
     join(homedir(), '.config', 'agent', 'skills'),

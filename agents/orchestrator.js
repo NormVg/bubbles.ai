@@ -26,7 +26,6 @@ ensureSkillsDiscovered().catch((err) => {
 
 /**
  * Format tool results into readable text for the Discord response.
- * Called when the model called tools but didn't summarize results.
  */
 function formatToolResults(steps) {
   const parts = [];
@@ -73,13 +72,57 @@ function formatToolResults(steps) {
           parts.push(`📚 **Loaded skill** from ${result.skillDirectory}`);
         }
       } else {
-        // Generic fallback
         parts.push(`🔧 **${toolName}**: ${JSON.stringify(result).slice(0, 500)}`);
       }
     }
   }
 
   return parts.join('\n\n');
+}
+
+/**
+ * Generate an upfront task plan via a quick LLM call.
+ * Returns an array of step description strings.
+ */
+async function generatePlanSteps(query) {
+  try {
+    logger.info('Orchestrator', 'Generating upfront plan...');
+
+    const planResult = await generateText({
+      model: getModel(),
+      system: `You are a task planner. Given a user request, output a JSON array of 2-6 short task step descriptions (max 50 chars each). Output ONLY the raw JSON array, no markdown, no code fences, no explanation.
+
+Example input: "get system info, save to file, send it"
+Example output: ["Gather system information","Save report to file","Send file to user"]
+
+Example input: "what time is it"
+Example output: ["Check current time"]`,
+      prompt: query,
+    });
+
+    const raw = planResult.text.trim();
+    logger.debug('Orchestrator', `Plan LLM response: ${raw}`);
+
+    // Extract JSON array from response
+    const match = raw.match(/\[[\s\S]*\]/);
+    if (match) {
+      const steps = JSON.parse(match[0]);
+      if (Array.isArray(steps) && steps.length > 0 && steps.length <= 10) {
+        const cleaned = steps.map((s) => String(s).slice(0, 60)).filter(Boolean);
+        if (cleaned.length > 0) {
+          logger.info('Orchestrator', `Plan generated: ${cleaned.length} steps`);
+          return cleaned;
+        }
+      }
+    }
+
+    logger.warn('Orchestrator', `Could not parse plan from: ${raw.slice(0, 100)}`);
+  } catch (err) {
+    logger.warn('Orchestrator', `Plan generation failed: ${err.message}`);
+  }
+
+  // Fallback
+  return ['Processing your request'];
 }
 
 /**
@@ -93,7 +136,6 @@ function formatToolResults(steps) {
  * @returns {Promise<{ text: string, steps: number, toolCalls: Array }>}
  */
 export async function runAgent(userMessage, context = {}) {
-  // Ensure skills are discovered
   const skills = await ensureSkillsDiscovered();
 
   const systemPrompt = await buildSystemPrompt({
@@ -102,18 +144,32 @@ export async function runAgent(userMessage, context = {}) {
     skills,
   });
 
-  // Build tools with skill support
   const tools = buildTools({ skills });
 
   logger.info('Orchestrator', `Processing query: "${userMessage.slice(0, 100)}..."`);
   logger.debug('Orchestrator', `Skills available: ${skills.length}, Tools: ${Object.keys(tools).join(', ')}`);
 
+  taskManager.setContext(userMessage);
+
+  // ── Pass 1: Generate upfront plan & show in Discord ────────────
+  const planSteps = await generatePlanSteps(userMessage);
+  taskManager.createPlan(planSteps);
+
+  // Log the full plan to terminal
+  logger.info('Orchestrator', '┌── Task Plan ──────────────────────');
+  planSteps.forEach((step, i) => {
+    logger.info('Orchestrator', `│ ${i + 1}. ${step}`);
+  });
+  logger.info('Orchestrator', '└───────────────────────────────────');
+
+  // ── Pass 2: Execute with auto-progress marking ─────────────────
   let stepCount = 0;
   const allToolCalls = [];
   const allSteps = [];
+  let lastMarkedStep = -1;
+  const totalPlanSteps = planSteps.length;
 
   try {
-    // Build messages array — AI SDK doesn't allow both `prompt` and `messages`
     const messages = [
       ...(context.history || []),
       { role: 'user', content: userMessage },
@@ -135,10 +191,8 @@ export async function runAgent(userMessage, context = {}) {
           toolResultCount: toolResults?.length || 0,
         });
 
-        // Store full step data for result building
         allSteps.push({ text, toolCalls, toolResults });
 
-        // Track tool calls for metadata
         if (toolCalls?.length) {
           allToolCalls.push(
             ...toolCalls.map((tc) => ({
@@ -148,7 +202,25 @@ export async function runAgent(userMessage, context = {}) {
           );
         }
 
-        // Fire onStep callback if provided (for Discord typing updates etc.)
+        // ── Auto-mark plan steps based on execution progress ──
+        // Skip steps that are just createPlan/markStep calls
+        const hasActionTools = toolCalls?.some(
+          (tc) => tc.toolName !== 'createPlan' && tc.toolName !== 'markStep'
+        );
+
+        if (hasActionTools && totalPlanSteps > 0) {
+          // Mark the next incomplete step as done
+          const nextStep = lastMarkedStep + 1;
+          if (nextStep < totalPlanSteps) {
+            taskManager.markStep(nextStep, 'done');
+            const plan = taskManager.getActivePlan();
+            const desc = plan?.steps[nextStep]?.description || '?';
+            logger.info('Orchestrator', `✅ Step ${nextStep + 1}/${totalPlanSteps}: ${desc}`);
+            lastMarkedStep = nextStep;
+          }
+        }
+
+        // Fire onStep callback
         if (context.onStep) {
           context.onStep({ step: stepCount, text, toolCalls, toolResults });
         }
@@ -157,21 +229,35 @@ export async function runAgent(userMessage, context = {}) {
 
     logger.info('Orchestrator', `Completed in ${stepCount} steps, ${allToolCalls.length} tool calls`);
 
-    // Build the final response
+    // ── Mark ALL remaining plan steps as done ──
+    const activePlan = taskManager.getActivePlan();
+    if (activePlan) {
+      for (let i = lastMarkedStep + 1; i < activePlan.steps.length; i++) {
+        taskManager.markStep(i, 'done');
+        logger.info('Orchestrator', `✅ Step ${i + 1}/${totalPlanSteps}: ${activePlan.steps[i]?.description}`);
+      }
+    }
+
+    // ── Build final response ──
     let finalText = result.text || '';
 
-    // If tools were called but the model's text doesn't include results,
-    // append formatted tool results.
     if (allToolCalls.length > 0) {
       const toolResultsSummary = formatToolResults(allSteps);
 
       if (toolResultsSummary) {
+        const hitStepLimit = stepCount >= config.MAX_STEPS;
         const modelJustNarrated = finalText.length < 200 && stepCount <= 2;
+        const noResponse = !finalText || finalText === 'Done — no output to show.';
 
-        if (modelJustNarrated || !finalText) {
-          finalText = finalText
-            ? `${finalText}\n\n${toolResultsSummary}`
+        if (noResponse || modelJustNarrated || hitStepLimit) {
+          const maxResultLen = 1600 - finalText.length;
+          const truncatedResults = toolResultsSummary.length > maxResultLen
+            ? toolResultsSummary.slice(0, maxResultLen) + '\n\n*...output truncated*'
             : toolResultsSummary;
+
+          finalText = finalText && finalText !== 'Done — no output to show.'
+            ? `${finalText}\n\n${truncatedResults}`
+            : truncatedResults;
         }
       }
     }

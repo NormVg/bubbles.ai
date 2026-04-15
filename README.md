@@ -23,7 +23,6 @@ An autonomous AI agent powered by **Ollama + AI SDK**, controlled via Discord @m
 bubbles.ai/
 ├── index.js              # Discord bot, message handling
 ├── config.js             # Centralized configuration
-├── soul.md               # Agent personality & rules
 ├── agents/
 │   └── orchestrator.js   # Main agent loop (generateText + tool loop)
 ├── core/
@@ -39,7 +38,10 @@ bubbles.ai/
 │   ├── shell.js          # Shell command execution
 │   ├── filesystem.js     # Read/write/list/send files
 │   └── loadSkill.js      # Load skill instructions on demand
-├── .agents/skills/       # Agent skills (SKILL.md files)
+├── .bubbles/
+│   ├── spec/
+│   │   └── soul.md       # Agent personality & rules
+│   └── skills/           # Agent skills (SKILL.md files)
 ├── workspace/            # Agent's working directory
 └── start.sh              # Auto-restart wrapper
 ```
@@ -108,7 +110,7 @@ LOG_LEVEL=debug npm run dev  # with debug logging
 
 ## Agent Skills
 
-Skills are folders in `.agents/skills/` containing a `SKILL.md` file with YAML frontmatter:
+Skills are folders in `.bubbles/skills/` containing a `SKILL.md` file with YAML frontmatter:
 
 ```yaml
 ---

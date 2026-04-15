@@ -9,6 +9,7 @@
 import { shellTool } from './shell.js';
 import { readFileTool, writeFileTool, listDirTool, sendFileTool } from './filesystem.js';
 import { createLoadSkillTool } from './loadSkill.js';
+import { createPlanTool, markStepTool } from './taskTools.js';
 
 /** Core tools that are always available */
 export const coreTools = {
@@ -17,6 +18,8 @@ export const coreTools = {
   writeFile: writeFileTool,
   listDir: listDirTool,
   sendFile: sendFileTool,
+  createPlan: createPlanTool,
+  markStep: markStepTool,
 };
 
 /**

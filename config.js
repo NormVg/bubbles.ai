@@ -12,7 +12,7 @@ const config = {
   OWNER_ID: process.env.OWNER_ID || '',
 
   // ── Agent ─────────────────────────────────────────────────────
-  MAX_STEPS: parseInt(process.env.MAX_STEPS || '25', 10),
+  MAX_STEPS: parseInt(process.env.MAX_STEPS || '40', 10),
   MAX_TOOL_ROUNDTRIPS: parseInt(process.env.MAX_TOOL_ROUNDTRIPS || '10', 10),
   RESPONSE_MAX_LENGTH: parseInt(process.env.RESPONSE_MAX_LENGTH || '1900', 10),
 
@@ -33,8 +33,8 @@ const config = {
   TERMINAL_PASSWORD: process.env.TERMINAL_PASSWORD,
 
   // ── Paths ─────────────────────────────────────────────────────
-  SOUL_FILE: './soul.md',
-  SKILLS_DIRS: ['.agents/skills'],
+  SOUL_FILE: './.bubbles/spec/soul.md',
+  SKILLS_DIRS: ['.bubbles/skills'],
   WORKING_DIR: process.cwd(),
   WORKSPACE_DIR: process.env.WORKSPACE_DIR || './workspace',
   ATTACHMENTS_DIR: process.env.ATTACHMENTS_DIR || './workspace/attachments',

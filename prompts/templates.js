@@ -6,11 +6,22 @@
 // ── Task decomposition ─────────────────────────────────────────
 export function taskDecompositionPrompt() {
   return `
-## Task Decomposition
-When you receive a complex request:
-1. Break it into clear, sequential sub-tasks
-2. Execute each sub-task immediately using tools — do NOT just describe what you would do
-3. Summarize what was accomplished at the end with actual results
+## Task Planning — IMPORTANT
+You must ALWAYS create a task list before executing any actions. Even if the task is simple and requires only 1 step, you must plan it out first.
+
+1. **First Action:** In your very first turn, you must ONLY call the \`createPlan\` tool with a list of short step descriptions (max 50 chars each). DO NOT call any other tools in this turn.
+2. **Execute:** Wait for the plan to be created, then execute the steps one by one using the appropriate tools.
+3. **Progress Tracking:** Call \`markStep\` to update the status ("done", "failed", "skipped") as you complete each step in the list.
+4. **Summary:** Finally, provide a summary of what was accomplished.
+
+This ensures the user sees a full live progress checklist in Discord before you start working.
+
+**Example:**
+- User: "List the files in the download folder"
+- Turn 1: You call ONLY \`createPlan({ steps: ["List files in Downloads directory", "Send response"] })\`
+- Turn 2: You call \`shell({ command: "ls -la ~/Downloads" })\`
+- Turn 3: You call \`markStep({ stepIndex: 0, status: "done" })\`
+- Turn 4: You respond with the file list.
 `.trim();
 }
 

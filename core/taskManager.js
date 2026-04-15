@@ -2,9 +2,9 @@ import { randomUUID } from 'crypto';
 import logger from './logger.js';
 
 /**
- * Lightweight in-memory task manager.
- * The orchestrator creates a plan at the start of each query,
- * then marks steps as it works through them.
+ * Lightweight in-memory task manager with live update callbacks.
+ * The agent creates a plan, marks steps as it works, and a handler
+ * pushes live updates to Discord.
  */
 
 const STATUS = {
@@ -15,23 +15,54 @@ const STATUS = {
   SKIPPED: 'skipped',
 };
 
+const STATUS_ICONS = {
+  [STATUS.PENDING]: '[ ]',
+  [STATUS.IN_PROGRESS]: '[~]',
+  [STATUS.DONE]: '[x]',
+  [STATUS.FAILED]: '[!]',
+  [STATUS.SKIPPED]: '[-]',
+};
+
 class TaskManager {
   constructor() {
-    /** @type {Map<string, { id: string, query: string, steps: Array, createdAt: Date }>} */
+    /** @type {Map<string, object>} */
     this.tasks = new Map();
+    this.activePlanId = null;
+    this._currentQuery = null;
+    this._onUpdate = null;
   }
 
   /**
-   * Create a new task plan.
-   * @param {string} query - Original user query
-   * @param {string[]} steps - List of step descriptions
-   * @returns {{ id: string, plan: object }}
+   * Set the current query context (called by orchestrator before each run).
    */
-  createPlan(query, steps = []) {
+  setContext(query) {
+    this._currentQuery = query;
+    this.activePlanId = null;
+  }
+
+  /**
+   * Set the update handler (called by Discord handler to receive live updates).
+   * @param {((plan: object) => Promise<void>) | null} handler
+   */
+  setUpdateHandler(handler) {
+    // Clear any pending debounced notification before changing handler
+    if (this._updateTimer) {
+      clearTimeout(this._updateTimer);
+      this._updateTimer = null;
+    }
+    this._onUpdate = handler;
+  }
+
+  /**
+   * Create a new task plan. Called by the agent's createPlan tool.
+   * @param {string[]} steps - List of step descriptions
+   * @returns {object} The created plan
+   */
+  createPlan(steps = []) {
     const id = randomUUID().slice(0, 8);
     const plan = {
       id,
-      query,
+      query: this._currentQuery || 'Working...',
       steps: steps.map((desc, i) => ({
         index: i,
         description: desc,
@@ -42,53 +73,104 @@ class TaskManager {
     };
 
     this.tasks.set(id, plan);
+    this.activePlanId = id;
     logger.info('TaskManager', `Created plan [${id}] with ${steps.length} steps`);
-    return { id, plan };
+    this._notifyUpdate(plan);
+    return plan;
   }
 
   /**
-   * Update a step's status and optional result.
+   * Update a step's status. Called by the agent's markStep tool.
+   * @param {number} stepIndex
+   * @param {string} status - One of: done, failed, skipped, in_progress
+   * @param {string} [result] - Optional result text
    */
-  markStep(taskId, stepIndex, status, result = null) {
-    const plan = this.tasks.get(taskId);
+  markStep(stepIndex, status, result = null) {
+    const plan = this.tasks.get(this.activePlanId);
     if (!plan) return null;
 
     const step = plan.steps[stepIndex];
     if (!step) return null;
 
     step.status = status;
-    step.result = result;
-    logger.debug('TaskManager', `[${taskId}] Step ${stepIndex}: ${status}`);
+    if (result) step.result = result;
+    logger.debug('TaskManager', `[${this.activePlanId}] Step ${stepIndex}: ${status}`);
+    this._notifyUpdate(plan);
     return step;
   }
 
   /**
-   * Get plan by ID.
+   * Get the active plan.
    */
-  getPlan(taskId) {
-    return this.tasks.get(taskId) || null;
+  getActivePlan() {
+    if (!this.activePlanId) return null;
+    return this.tasks.get(this.activePlanId) || null;
   }
 
   /**
-   * Get a markdown checklist of the current plan state.
+   * Check if all steps in the active plan are completed (done/failed/skipped).
    */
-  getSummary(taskId) {
-    const plan = this.tasks.get(taskId);
-    if (!plan) return 'No active task plan.';
+  isComplete() {
+    const plan = this.getActivePlan();
+    if (!plan) return false;
+    return plan.steps.every(
+      (s) => s.status === STATUS.DONE || s.status === STATUS.FAILED || s.status === STATUS.SKIPPED
+    );
+  }
 
-    const statusIcons = {
-      [STATUS.PENDING]: '[ ]',
-      [STATUS.IN_PROGRESS]: '[/]',
-      [STATUS.DONE]: '[x]',
-      [STATUS.FAILED]: '[!]',
-      [STATUS.SKIPPED]: '[-]',
-    };
+  /**
+   * Get a formatted Discord-friendly summary of the plan.
+   */
+  getFormattedSummary(planId) {
+    const plan = this.tasks.get(planId || this.activePlanId);
+    if (!plan) return null;
 
+    const doneCount = plan.steps.filter((s) => s.status === STATUS.DONE).length;
+    const failedCount = plan.steps.filter((s) => s.status === STATUS.FAILED).length;
+    const total = plan.steps.length;
+    const progress = total > 0 ? Math.round((doneCount / total) * 100) : 0;
+
+    // Visual progress bar
+    const barLen = 10;
+    const filled = Math.round((doneCount / total) * barLen);
+    const bar = '█'.repeat(filled) + '░'.repeat(barLen - filled);
+
+    // Step list
     const lines = plan.steps.map(
-      (s) => `- ${statusIcons[s.status]} ${s.description}`
+      (s) => `${STATUS_ICONS[s.status]} ${s.description}`
     );
 
-    return `**Task:** ${plan.query}\n${lines.join('\n')}`;
+    // Status label
+    let statusLabel = '`STATUS: WORKING`';
+    if (doneCount === total) statusLabel = '`STATUS: COMPLETE`';
+    else if (failedCount > 0) statusLabel = '`STATUS: IN PROGRESS (errors)`';
+
+    return [
+      `**\`TASK PROGRESS\`**`,
+      ``,
+      lines.join('\n'),
+      ``,
+      `\`${bar}\`  ${doneCount}/${total} (${progress}%)`,
+      statusLabel,
+    ].join('\n');
+  }
+
+  /**
+   * Notify the update handler (debounced to prevent race conditions).
+   */
+  _notifyUpdate(plan) {
+    if (!this._onUpdate) return;
+
+    // Debounce: collapse rapid-fire notifications into one
+    if (this._updateTimer) clearTimeout(this._updateTimer);
+    this._updateTimer = setTimeout(() => {
+      // Guard: handler may have been cleared during the debounce wait
+      if (this._onUpdate) {
+        Promise.resolve(this._onUpdate(plan)).catch((err) => {
+          logger.warn('TaskManager', `Update handler error: ${err.message}`);
+        });
+      }
+    }, 300);
   }
 
   /**

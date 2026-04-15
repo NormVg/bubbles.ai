@@ -10,7 +10,7 @@ import {
 import { exec, spawn } from 'child_process';
 import { promisify } from 'util';
 import { writeFile, mkdir } from 'fs/promises';
-import { join } from 'path';
+import { join, resolve as pathResolve } from 'path';
 import { get } from 'https';
 import { get as httpGet } from 'http';
 import config from './config.js';
@@ -66,25 +66,31 @@ async function registerSlashCommands() {
 
 // ── Helper: Download Attachment ────────────────────────────────
 async function downloadAttachment(url, filename) {
-  const tempDir = resolve(config.WORKSPACE_DIR, 'attachments');
+  const tempDir = pathResolve(config.WORKSPACE_DIR, 'attachments');
   await mkdir(tempDir, { recursive: true });
-  const filePath = join(tempDir, filename);
 
-  return new Promise((resolve, reject) => {
+  // Add timestamp to prevent overwrites: report.pdf → report_1713193200000.pdf
+  const dotIdx = filename.lastIndexOf('.');
+  const uniqueName = dotIdx > 0
+    ? `${filename.slice(0, dotIdx)}_${Date.now()}${filename.slice(dotIdx)}`
+    : `${filename}_${Date.now()}`;
+  const filePath = join(tempDir, uniqueName);
+
+  return new Promise((res, reject) => {
     const httpModule = url.startsWith('https') ? get : httpGet;
-    httpModule(url, (res) => {
-      if (res.statusCode >= 300 && res.statusCode < 400 && res.headers.location) {
+    httpModule(url, (response) => {
+      if (response.statusCode >= 300 && response.statusCode < 400 && response.headers.location) {
         // Follow redirect
-        downloadAttachment(res.headers.location, filename).then(resolve).catch(reject);
+        downloadAttachment(response.headers.location, filename).then(res).catch(reject);
         return;
       }
       const chunks = [];
-      res.on('data', (chunk) => chunks.push(chunk));
-      res.on('end', async () => {
+      response.on('data', (chunk) => chunks.push(chunk));
+      response.on('end', async () => {
         await writeFile(filePath, Buffer.concat(chunks));
-        resolve(filePath);
+        res(filePath);
       });
-      res.on('error', reject);
+      response.on('error', reject);
     }).on('error', reject);
   });
 }

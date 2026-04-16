@@ -46,13 +46,15 @@ export async function buildSystemPrompt(context = {}) {
     sections.push(buildSkillsPrompt(context.skills));
   }
 
-  // Inject active task plan if present
+  // Inject active task plan — this is the agent's execution roadmap
   if (context.taskPlan) {
     sections.push(`
-## Current Task Plan
+## Execution Plan
+The orchestrator has decomposed the user's request into these steps. You will execute them one at a time. The orchestrator will tell you which step to work on.
+
 ${context.taskPlan}
 
-Work through the uncompleted items in order. Mark them done as you complete them.
+Focus entirely on the step the orchestrator assigns you. Use previous step results as context but do not redo completed work.
 `.trim());
   }
 

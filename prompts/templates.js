@@ -1,71 +1,112 @@
 /**
- * Reusable prompt fragments for the orchestration agent.
- * Keep them as functions so they can be composed dynamically.
+ * Prompt fragments for the orchestration agent.
+ * Composed into the system prompt by system.js.
+ *
+ * Design: dense, actionable, no redundancy with soul.md.
+ * Soul.md covers identity, workspace rules, situational routing.
+ * These fragments cover execution context, tool strategy, and error handling.
  */
 
-// ── Task decomposition ─────────────────────────────────────────
+// ── Execution context ──────────────────────────────────────────
 export function taskDecompositionPrompt() {
   return `
-## Task Planning — IMPORTANT
-You must ALWAYS create a task list before executing any actions. Even if the task is simple and requires only 1 step, you must plan it out first.
+## Step-By-Step Execution
 
-1. **First Action:** In your very first turn, you must ONLY call the \`createPlan\` tool with a list of short step descriptions (max 50 chars each). DO NOT call any other tools in this turn.
-2. **Execute:** Wait for the plan to be created, then execute the steps one by one using the appropriate tools.
-3. **Progress Tracking:** Call \`markStep\` to update the status ("done", "failed", "skipped") as you complete each step in the list.
-4. **Summary:** Finally, provide a summary of what was accomplished.
+You are inside an orchestrated loop. A planner broke the request into steps. You receive one step at a time.
 
-This ensures the user sees a full live progress checklist in Discord before you start working.
+For each step:
+- Focus ONLY on that step. Do not work ahead or repeat past work.
+- Use the minimum tool calls needed.
+- If the step requires creating files, ensure the workspace subfolder exists first.
+- End with a short factual summary of what this step accomplished (1-2 sentences max).
 
-**Example:**
-- User: "List the files in the download folder"
-- Turn 1: You call ONLY \`createPlan({ steps: ["List files in Downloads directory", "Send response"] })\`
-- Turn 2: You call \`shell({ command: "ls -la ~/Downloads" })\`
-- Turn 3: You call \`markStep({ stepIndex: 0, status: "done" })\`
-- Turn 4: You respond with the file list.
+The orchestrator tracks progress — do NOT call createPlan or markStep.
 `.trim();
 }
 
-// ── Tool usage guidelines ──────────────────────────────────────
+// ── Tool selection ─────────────────────────────────────────────
 export function toolUsagePrompt() {
   return `
-## Tool Usage — CRITICAL
-You MUST use tools to perform actions. NEVER just say you will do something — actually DO IT by calling the appropriate tool.
+## Tool Strategy
 
-**ALWAYS call a tool when the user asks you to:**
-- Find files/folders → use \`shell\` with \`find\` or \`ls\` commands, or use \`listDir\`
-- Read file contents → use \`readFile\`
-- Write/create files → use \`writeFile\`
-- Run commands → use \`shell\`
-- Search for text → use \`shell\` with \`grep\` or \`find\`
+**Build / Create:**
+- \`shell\` — scaffolding (npx, npm init), installing deps, running builds/servers
+- \`writeFile\` — creating files (path must start with ./workspace/)
+- Always \`mkdir -p ./workspace/<project>/\` before writing files
 
-**WRONG**: "I'll search for the folder" (then stopping)
-**RIGHT**: Actually call the \`shell\` tool with \`find / -name "foldername" -type d 2>/dev/null\`
+**Discover / Read:**
+- \`listDir\` — structured directory listing
+- \`readFile\` — read specific file contents
+- \`shell\` with find/mdfind/grep — search filesystem
 
-When a command fails, try an alternative approach. If stuck after 2 attempts, explain the problem.
+**Web:**
+- \`webSearch\` — search Google via real browser, returns titles + URLs
+- \`webScrape\` — extract readable text from any URL (handles JS-rendered pages)
+- Can also use \`shell\` with \`agent-browser\` CLI directly for advanced browser automation
+
+**Deliver:**
+- \`sendFile\` — attach file to Discord response
+- Inline short results in text
+
+**Learn:**
+- \`loadSkill\` — load specialized instructions (system-info, pdf, etc.)
+
+**Anti-patterns:**
+- Describing actions instead of executing them
+- Writing files outside ./workspace/
+- Retrying identical failing commands
+- Using shell for simple file reads (use readFile)
 `.trim();
 }
 
 // ── Error handling ─────────────────────────────────────────────
 export function errorHandlingPrompt() {
   return `
-## Error Handling
-If any tool call fails or returns an error:
-1. Do NOT retry the exact same command more than once
-2. Analyze the error output to understand what went wrong
-3. Try a different approach or fix the underlying issue
-4. If you cannot resolve it after 2 attempts, explain the problem to the user and ask for guidance
+## Error Recovery
+
+When a tool fails:
+1. Read the error — the fix is usually in the message
+2. Diagnose: path error? missing dep? syntax error? permission?
+3. Apply ONE targeted fix
+4. If that fails too, stop and report:
+   - What you tried
+   - The exact error
+   - Suggested next step
+
+Quick fixes:
+- "command not found" → install or use alternative
+- "ENOENT" → wrong path, verify with ls/find
+- "EACCES" → permissions, try chmod or sudo
+- Build errors → read error line, fix code, rebuild
+- "npm ERR!" → rm -rf node_modules && npm install
+
+Never silently ignore errors. Never retry without changes.
 `.trim();
 }
 
 // ── Response formatting ────────────────────────────────────────
 export function responseFormattingPrompt() {
   return `
-## Response Format & Discord Limitations — CRITICAL
-- Keep responses concise and under 1800 characters when possible
-- **NEVER use markdown tables (\`| Header | Header |\`)**. Discord does NOT support them and they will render as broken text.
-- If you need to present tabular data, use code blocks (\`\`\`\`) or well-formatted bulleted lists instead.
-- For code output, always wrap in appropriate language code blocks
-- For file listings, use a clean tree format
-- End with a brief summary of what was done
+## Discord Response Format
+
+**Hard limits:** Max 1800 chars. No markdown tables. No HTML.
+
+**Structure every response like this:**
+1. **What was done** — bold label + brief description
+2. **Details** — bullet list or code block
+3. **Result/Status** — what's ready, what's next
+
+**Formatting toolkit:**
+- \`**bold**\` for labels
+- \`\\\`inline code\\\`\` for paths, commands, values
+- Fenced code blocks with language tag for output
+- Bullet lists for structured data
+- \`> blockquote\` for important notes
+
+**Never do:**
+- Tables (| x | y |) — broken in Discord
+- "Sure!", "Of course!", "Great question!" — go straight to results
+- Walls of unformatted text — always structure with bullets or blocks
+- Repeating the user's question back to them
 `.trim();
 }

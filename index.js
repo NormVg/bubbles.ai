@@ -18,6 +18,7 @@ import { runAgent } from './agents/orchestrator.js';
 import { getPendingFiles } from './tools/filesystem.js';
 import taskManager from './core/taskManager.js';
 import logger from './core/logger.js';
+import { getHistory, addToHistory, loadPersistedHistory } from './core/chatHistory.js';
 
 const execAsync = promisify(exec);
 let activeTerminal = null;
@@ -202,6 +203,9 @@ client.once('clientReady', async () => {
   const guilds = [...client.guilds.cache.values()].map((g) => `${g.name} (${g.id})`).join(', ');
   if (guilds) logger.info('Discord', `Connected guilds: ${guilds}`);
 
+  // Load persisted chat history from disk
+  await loadPersistedHistory();
+
   try {
     await registerSlashCommands();
   } catch (err) {
@@ -278,14 +282,21 @@ client.on('messageCreate', async (message) => {
       });
     });
 
-    // Run the agent
+    // Run the agent with conversation history
+    const channelId = message.channel.id;
+    const history = getHistory(channelId);
+
     const result = await runAgent(text, {
       extraContext,
+      history,
       onStep: () => {
         // Keep typing indicator alive during multi-step operations
         message.channel.sendTyping().catch(() => { });
       },
     });
+
+    // Store this exchange in channel history
+    addToHistory(channelId, text, result.text);
 
     // Clean up task handler & typing
     taskManager.setUpdateHandler(null);

@@ -11,6 +11,10 @@ const config = {
   DISCORD_GUILD_ID: process.env.DISCORD_GUILD_ID || '',
   OWNER_ID: process.env.OWNER_ID || '',
 
+  // ── Google Search ──────────────────────────────────────────────
+  GOOGLE_API_KEY: process.env.GOOGLE_API_KEY || '',
+  GOOGLE_CSE_ID: process.env.GOOGLE_CSE_ID || '',
+
   // ── Agent ─────────────────────────────────────────────────────
   MAX_STEPS: parseInt(process.env.MAX_STEPS || '40', 10),
   MAX_TOOL_ROUNDTRIPS: parseInt(process.env.MAX_TOOL_ROUNDTRIPS || '10', 10),

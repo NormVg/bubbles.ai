@@ -1,178 +1,176 @@
 /**
- * Web tools — search and scrape using agent-browser CLI.
+ * Web tools — Google search and page scraping via Puppeteer.
  *
- * agent-browser is a Rust-based browser automation CLI that uses Chrome via CDP.
- * It's already installed globally: `agent-browser --version`
- *
- * These tools wrap common patterns:
- * - webSearch: Google search + extract results
- * - webScrape: Navigate to URL + extract readable text
+ * Uses puppeteer-extra with stealth plugin to bypass bot detection.
+ * Headless Chrome — works for Google, JS-rendered SPAs, everything.
  */
 
-import { exec } from 'child_process';
+import puppeteer from 'puppeteer-extra';
+import StealthPlugin from 'puppeteer-extra-plugin-stealth';
 import { tool } from 'ai';
 import { z } from 'zod';
 import logger from '../core/logger.js';
 
-const TIMEOUT = 30000;
-const MAX_OUTPUT = 6000;
+// Apply stealth plugin (hides headless fingerprints)
+puppeteer.use(StealthPlugin());
 
-/**
- * Run an agent-browser command and return stdout.
- */
-function runBrowser(command, timeout = TIMEOUT) {
-  return new Promise((resolve) => {
-    exec(command, { timeout, maxBuffer: 1024 * 1024, shell: '/bin/zsh' }, (error, stdout, stderr) => {
-      if (error && error.killed) {
-        resolve({ output: '', error: `Command timed out after ${timeout}ms` });
-      } else if (error) {
-        resolve({ output: stdout || '', error: stderr || error.message });
-      } else {
-        resolve({ output: stdout || '', error: null });
-      }
+const MAX_CONTENT = 6000;
+
+/** Shared browser instance — launches once, reuses across calls. */
+let _browser = null;
+
+async function getBrowser() {
+  if (!_browser || !_browser.connected) {
+    _browser = await puppeteer.launch({
+      headless: true,
+      args: [
+        '--no-sandbox',
+        '--disable-setuid-sandbox',
+        '--disable-dev-shm-usage',
+        '--disable-gpu',
+      ],
     });
-  });
+    logger.info('Puppeteer', 'Browser launched');
+  }
+  return _browser;
 }
 
 /**
- * webSearch — Search Google using agent-browser and extract results.
+ * webSearch — DuckDuckGo search via headless Chrome.
+ * (Google blocks headless browsers with CAPTCHA even with stealth.)
  */
 export const webSearchTool = tool({
   description:
-    'Search Google for information using a real browser. Returns top result titles, URLs, and snippets. ' +
-    'Use when you need current information, documentation, tutorials, or to research any topic.',
+    'Search the web for information. Returns titles, URLs, and snippets. ' +
+    'Use when you need current info, docs, tutorials, or to research any topic.',
   parameters: z.object({
     query: z.string().describe('The search query'),
-    maxResults: z.number().optional().describe('Max results to return (default: 5)'),
+    maxResults: z.number().optional().describe('Max results (default: 5)'),
   }),
   execute: async ({ query, maxResults = 5 }) => {
     logger.info('WebSearch', `Searching: "${query}"`);
+    let page;
 
     try {
+      const browser = await getBrowser();
+      page = await browser.newPage();
+      await page.setViewport({ width: 1280, height: 800 });
+
       const encoded = encodeURIComponent(query);
-      const searchUrl = `https://www.google.com/search?q=${encoded}&num=${maxResults + 3}`;
+      await page.goto(`https://duckduckgo.com/?q=${encoded}`, {
+        waitUntil: 'networkidle2',
+        timeout: 15000,
+      });
 
-      // Navigate to Google search
-      await runBrowser(`agent-browser open "${searchUrl}"`);
+      // Wait for results
+      await page.waitForSelector('[data-testid="result"]', { timeout: 8000 }).catch(() => { });
 
-      // Wait for results to load
-      await runBrowser(`agent-browser wait --load networkidle`);
+      // Extract results from DDG DOM
+      const results = await page.evaluate((max) => {
+        const items = [];
+        const els = document.querySelectorAll('[data-testid="result"]');
 
-      // Extract search results using snapshot (interactive elements)
-      const { output: snapshot, error } = await runBrowser(`agent-browser snapshot -c`);
+        for (const el of els) {
+          if (items.length >= max) break;
 
-      if (error && !snapshot) {
-        logger.error('WebSearch', `Browser error: ${error}`);
-        return { error, results: [] };
-      }
+          const linkEl = el.querySelector('a[data-testid="result-title-a"]') || el.querySelector('a[href^="http"]');
+          const snippetEl = el.querySelector('[data-result="snippet"]') || el.querySelector('span:not(:has(*))');
 
-      // Parse results from the snapshot text
-      const results = [];
-      const lines = snapshot.split('\n');
-      let currentTitle = '';
-      let currentUrl = '';
+          if (linkEl) {
+            const title = linkEl.textContent?.trim() || '';
+            const url = linkEl.href || '';
+            const snippet = snippetEl?.textContent?.trim() || '';
 
-      for (const line of lines) {
-        const trimmed = line.trim();
-
-        // Look for links that are search results (contain http and have text)
-        const urlMatch = trimmed.match(/\[link\].*?"(https?:\/\/[^"]+)"/i) ||
-          trimmed.match(/(https?:\/\/(?!www\.google\.|google\.)[^\s"]+)/);
-        if (urlMatch) {
-          currentUrl = urlMatch[1];
-        }
-
-        // Capture text content near links as titles
-        if (currentUrl && trimmed.length > 10 && !trimmed.includes('google.com')) {
-          const titleText = trimmed.replace(/\[.*?\]/g, '').replace(/[@\d]+/g, '').trim();
-          if (titleText.length > 5 && !currentTitle) {
-            currentTitle = titleText.slice(0, 100);
+            if (title && url && !url.includes('duckduckgo.com')) {
+              items.push({ title, url, snippet });
+            }
           }
         }
-
-        // When we have both, save the result
-        if (currentUrl && currentTitle) {
-          results.push({
-            title: currentTitle,
-            url: currentUrl,
-          });
-          currentTitle = '';
-          currentUrl = '';
-          if (results.length >= maxResults) break;
-        }
-      }
-
-      // Close the browser
-      await runBrowser(`agent-browser close`);
+        return items;
+      }, maxResults);
 
       logger.info('WebSearch', `Found ${results.length} results`);
-      return { query, results, count: results.length };
+      return { query, engine: 'duckduckgo', results, count: results.length };
     } catch (err) {
       logger.error('WebSearch', `Search failed: ${err.message}`);
       return { error: err.message, results: [] };
+    } finally {
+      if (page) await page.close().catch(() => { });
     }
   },
 });
 
 /**
- * webScrape — Navigate to a URL and extract readable text content.
+ * webScrape — Fetch any URL with headless Chrome and extract text.
+ * Handles JS-rendered pages, SPAs, dynamic content.
  */
 export const webScrapeTool = tool({
   description:
-    'Fetch a web page using a real browser and extract its text content. ' +
+    'Open a web page in a real browser and extract readable text content. ' +
     'Handles JavaScript-rendered pages, SPAs, and dynamic content. ' +
-    'Use to read documentation, articles, guides, API docs, or any web page.',
+    'Use to read docs, articles, guides, API refs, or any web page.',
   parameters: z.object({
     url: z.string().describe('The URL to scrape'),
   }),
   execute: async ({ url }) => {
     logger.info('WebScrape', `Scraping: ${url}`);
+    let page;
 
     try {
-      // Navigate to the page
-      await runBrowser(`agent-browser open "${url}"`);
+      const browser = await getBrowser();
+      page = await browser.newPage();
 
-      // Wait for page to fully load
-      await runBrowser(`agent-browser wait --load networkidle`);
+      await page.setViewport({ width: 1280, height: 800 });
+      await page.goto(url, {
+        waitUntil: 'networkidle2',
+        timeout: 20000,
+      });
 
-      // Get the page title
-      const { output: title } = await runBrowser(`agent-browser get title`);
+      // Extract title and main content
+      const data = await page.evaluate(() => {
+        const title = document.title || '';
 
-      // Get full page text via snapshot (compact mode for readability)
-      const { output: snapshot, error } = await runBrowser(`agent-browser snapshot -c`);
+        // Remove noise elements
+        const remove = ['script', 'style', 'nav', 'footer', 'header', 'aside', 'iframe', 'noscript'];
+        remove.forEach((tag) => {
+          document.querySelectorAll(tag).forEach((el) => el.remove());
+        });
 
-      if (error && !snapshot) {
-        logger.error('WebScrape', `Browser error: ${error}`);
-        return { error, url };
-      }
+        // Try to get main content area first
+        const main =
+          document.querySelector('main') ||
+          document.querySelector('article') ||
+          document.querySelector('[role="main"]') ||
+          document.querySelector('.content') ||
+          document.body;
 
-      // Clean up the snapshot output to extract readable text
-      let content = snapshot
-        .replace(/^\s*@\w+\s*/gm, '')       // Remove element refs
-        .replace(/\[(?:img|image)\]/gi, '')  // Remove image markers
-        .replace(/\n{3,}/g, '\n\n')          // Collapse blank lines
+        const text = main?.innerText || document.body.innerText || '';
+        return { title, text };
+      });
+
+      // Clean up
+      let content = data.text
+        .replace(/\n{3,}/g, '\n\n')
+        .replace(/[ \t]{2,}/g, ' ')
         .trim();
 
-      // Truncate
-      if (content.length > MAX_OUTPUT) {
-        content = content.slice(0, MAX_OUTPUT) + '\n\n[...content truncated]';
+      if (content.length > MAX_CONTENT) {
+        content = content.slice(0, MAX_CONTENT) + '\n\n[...truncated]';
       }
 
-      // Close browser
-      await runBrowser(`agent-browser close`);
-
       logger.info('WebScrape', `Scraped ${url}: ${content.length} chars`);
-      return {
-        title: title.trim(),
-        url,
-        content,
-        length: content.length,
-      };
+      return { title: data.title, url, content, length: content.length };
     } catch (err) {
       logger.error('WebScrape', `Scrape failed: ${err.message}`);
       return { error: err.message, url };
+    } finally {
+      if (page) await page.close().catch(() => { });
     }
   },
 });
+
+// Cleanup on process exit
+process.on('exit', () => _browser?.close().catch(() => { }));
+process.on('SIGINT', () => { _browser?.close().catch(() => { }); process.exit(); });
 
 export default { webSearchTool, webScrapeTool };

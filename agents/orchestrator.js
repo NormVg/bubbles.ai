@@ -106,11 +106,11 @@ export async function runAgent(userMessage, context = {}) {
   taskManager.createPlan(planSteps);
 
   // Log the full plan to terminal
-  logger.info('Orchestrator', '┌── Task Plan ──────────────────────');
+  logger.info('Orchestrator', '─── Task Plan ──────────────────────');
   planSteps.forEach((step, i) => {
     logger.info('Orchestrator', `│ ${i + 1}. ${step}`);
   });
-  logger.info('Orchestrator', '└───────────────────────────────────');
+  logger.info('Orchestrator', '────────────────────────────────────');
 
   // ── Pass 2: Execute each step one at a time ────────────────────
   let totalStepCount = 0;

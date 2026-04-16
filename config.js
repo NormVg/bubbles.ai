@@ -16,7 +16,7 @@ const config = {
   GOOGLE_CSE_ID: process.env.GOOGLE_CSE_ID || '',
 
   // ── Agent ─────────────────────────────────────────────────────
-  MAX_STEPS: parseInt(process.env.MAX_STEPS || '40', 10),
+  MAX_STEPS: parseInt(process.env.MAX_STEPS || '60', 10),
   MAX_TOOL_ROUNDTRIPS: parseInt(process.env.MAX_TOOL_ROUNDTRIPS || '10', 10),
   RESPONSE_MAX_LENGTH: parseInt(process.env.RESPONSE_MAX_LENGTH || '1900', 10),
 

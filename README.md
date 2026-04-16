@@ -19,32 +19,78 @@ An autonomous AI agent powered by **Ollama + AI SDK**, controlled via Discord @m
 
 ## Architecture
 
-```
+Bubbles follows an **Orchestrator-Worker** loop architecture, augmented with persistent memory and dynamic skills.
+
+### System Flow
+\`\`\`mermaid
+graph TD
+    User([Discord User]) -->|@Mention| Discord[index.js]
+
+    subgraph Bubbles Architecture
+        Discord -->|Message & Context| Orchestrator[Orchestrator / agents/orchestrator.js]
+
+        Orchestrator -->|1. Generate Plan| LLM[LLM Provider]
+        LLM -->|Plan Steps| Orchestrator
+
+        Orchestrator -->|2. Build System Prompt| PromptBuilder[prompts/system.js]
+        PromptBuilder -->|Read Profile/Rules| Soul[.bubbles/spec/soul.md]
+
+        Orchestrator -->|3. Execute Step Loop| ToolLoop[Tool Execution Loop]
+
+        ToolLoop <-->|Execute Tools| Tools[tools/index.js]
+
+        Tools -.-> FS[FileSystem]
+        Tools -.-> Web[Web & Puppeteer]
+        Tools -.-> MemoryStore[Memory Engine / core/memoryStore.js]
+        Tools -.-> Cmd[Shell / Terminal]
+    end
+
+    ToolLoop -->|4. Final Output| Discord
+
+    subgraph Memory Architecture
+        MemoryStore -->|Read/Write YAML+MD| EPS[episodic/]
+        MemoryStore -->|Read/Write| KNL[knowledge/]
+        MemoryStore -->|Read/Write| PRJ[projects/]
+        MemoryStore -->|System State| SYS[system/]
+    end
+\`\`\`
+
+### Directory Structure
+
+\`\`\`
 bubbles.ai/
-├── index.js              # Discord bot, message handling
-├── config.js             # Centralized configuration
+├── index.js              # Discord bot, message handling logic
+├── config.js             # Centralized configuration (ENV wrappers)
 ├── agents/
-│   └── orchestrator.js   # Main agent loop (generateText + tool loop)
+│   └── orchestrator.js   # Main agent loop (Ralph Loop handling, tool invocation)
 ├── core/
-│   ├── provider.js       # Dynamic Ollama/AI SDK provider
-│   ├── logger.js         # Structured logging
-│   ├── taskManager.js    # Task tracking
-│   └── skillLoader.js    # Skill discovery & loading
+│   ├── provider.js       # Dynamic Ollama/AI SDK provider abstraction
+│   ├── logger.js         # Structured JSON/console logging
+│   ├── memoryStore.js    # Persistent File-based Memory System Engine
+│   ├── chatHistory.js    # Short-term sliding window context manager
+│   ├── interactionLog.js # System-level interaction archiver
+│   └── skillLoader.js    # Dynamic skill discovery & loading
 ├── prompts/
-│   ├── system.js         # System prompt builder
-│   └── templates.js      # Reusable prompt fragments
+│   ├── system.js         # System prompt stitcher (combines memory, templates, soul)
+│   └── templates.js      # Reusable strict prompt constraint fragments
 ├── tools/
-│   ├── index.js          # Tool registry
-│   ├── shell.js          # Shell command execution
+│   ├── index.js          # Zod Tool registry
+│   ├── web.js            # Puppeteer Web Scraping & DDG Search
+│   ├── memoryTools.js    # memoryRead/Write/Recall/Capture tools
+│   ├── shell.js          # Guardrailed Shell Command Executor
 │   ├── filesystem.js     # Read/write/list/send files
 │   └── loadSkill.js      # Load skill instructions on demand
 ├── .bubbles/
+│   ├── memory/           # Persistent LLM Storage (episodic, knowledge, projects, tasks)
 │   ├── spec/
-│   │   └── soul.md       # Agent personality & rules
+│   │   └── soul.md       # Agent personality & identity profile
 │   └── skills/           # Agent skills (SKILL.md files)
-├── workspace/            # Agent's working directory
-└── start.sh              # Auto-restart wrapper
-```
+├── workspace/            # Safe working directory for files/projects
+│   ├── attachments/      # Downloaded Discord attachments
+│   ├── .context/         # Overflow context dumps for tools (context rot prevention)
+│   └── .logs/            # Searchable JSONL interaction logs
+└── start.sh              # Auto-restart daemon wrapper
+\`\`\`
 
 ## Setup
 

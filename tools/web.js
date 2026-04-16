@@ -9,12 +9,32 @@ import puppeteer from 'puppeteer-extra';
 import StealthPlugin from 'puppeteer-extra-plugin-stealth';
 import { tool } from 'ai';
 import { z } from 'zod';
+import { writeFile, mkdir } from 'fs/promises';
+import path from 'path';
+import config from '../config.js';
 import logger from '../core/logger.js';
 
 // Apply stealth plugin (hides headless fingerprints)
 puppeteer.use(StealthPlugin());
 
 const MAX_CONTENT = 6000;
+const OFFLOAD_THRESHOLD = 3000;
+const CONTEXT_DIR = path.join(config.WORKSPACE_DIR, '.context');
+
+/** Offload large content to file, return head+tail */
+async function offloadContent(content, label) {
+  if (content.length <= OFFLOAD_THRESHOLD) return content;
+  try {
+    await mkdir(CONTEXT_DIR, { recursive: true });
+    const file = path.join(CONTEXT_DIR, `${label}-${Date.now()}.txt`);
+    await writeFile(file, content);
+    const head = content.slice(0, 1200);
+    const tail = content.slice(-800);
+    return `${head}\n\n... [${content.length} chars — full content saved to ${file}] ...\n\n${tail}`;
+  } catch {
+    return content.slice(0, MAX_CONTENT);
+  }
+}
 
 /** Shared browser instance — launches once, reuses across calls. */
 let _browser = null;
@@ -158,8 +178,11 @@ export const webScrapeTool = tool({
         content = content.slice(0, MAX_CONTENT) + '\n\n[...truncated]';
       }
 
+      // Offload large content to file
+      const finalContent = await offloadContent(content, 'scrape');
+
       logger.info('WebScrape', `Scraped ${url}: ${content.length} chars`);
-      return { title: data.title, url, content, length: content.length };
+      return { title: data.title, url, content: finalContent, length: content.length };
     } catch (err) {
       logger.error('WebScrape', `Scrape failed: ${err.message}`);
       return { error: err.message, url };

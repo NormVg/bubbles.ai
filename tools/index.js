@@ -11,6 +11,7 @@ import { readFileTool, writeFileTool, listDirTool, sendFileTool } from './filesy
 import { createLoadSkillTool } from './loadSkill.js';
 import { createPlanTool, markStepTool } from './taskTools.js';
 import { webSearchTool, webScrapeTool } from './web.js';
+import { memoryReadTool, memoryWriteTool, memoryRecallTool, memoryListTool, memoryCaptureTool } from './memoryTools.js';
 
 /** Core tools that are always available */
 export const coreTools = {
@@ -23,6 +24,11 @@ export const coreTools = {
   markStep: markStepTool,
   webSearch: webSearchTool,
   webScrape: webScrapeTool,
+  memoryRead: memoryReadTool,
+  memoryWrite: memoryWriteTool,
+  memoryRecall: memoryRecallTool,
+  memoryList: memoryListTool,
+  memoryCapture: memoryCaptureTool,
 };
 
 /**

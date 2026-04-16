@@ -19,6 +19,7 @@ import { getPendingFiles } from './tools/filesystem.js';
 import taskManager from './core/taskManager.js';
 import logger from './core/logger.js';
 import { getHistory, addToHistory, loadPersistedHistory } from './core/chatHistory.js';
+import { logInteraction } from './core/interactionLog.js';
 
 const execAsync = promisify(exec);
 let activeTerminal = null;
@@ -283,8 +284,8 @@ client.on('messageCreate', async (message) => {
     });
 
     // Run the agent with conversation history
-    const channelId = message.channel.id;
-    const history = getHistory(channelId);
+    const history = getHistory();
+    const startTime = Date.now();
 
     const result = await runAgent(text, {
       extraContext,
@@ -295,8 +296,20 @@ client.on('messageCreate', async (message) => {
       },
     });
 
-    // Store this exchange in channel history
-    addToHistory(channelId, text, result.text);
+    // Store this exchange in session history
+    await addToHistory(text, result.text);
+
+    // Log the interaction
+    logInteraction({
+      userId: message.author.id,
+      userName: message.author.username,
+      channelId: message.channel.id,
+      userMessage: text,
+      agentResponse: result.text,
+      steps: result.steps,
+      toolsUsed: [...new Set((result.toolCalls || []).map(tc => tc.tool))],
+      durationMs: Date.now() - startTime,
+    }).catch(() => { });
 
     // Clean up task handler & typing
     taskManager.setUpdateHandler(null);

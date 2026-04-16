@@ -124,6 +124,7 @@ export async function runAgent(userMessage, context = {}) {
   const systemPrompt = await buildSystemPrompt({
     taskPlan: planSteps.map((s, i) => `${i + 1}. ${s}`).join('\n'),
     extraContext: context.extraContext || null,
+    userQuery: userMessage,
     skills,
   });
 
@@ -137,49 +138,65 @@ export async function runAgent(userMessage, context = {}) {
       const stepDesc = planSteps[planIdx];
       logger.info('Orchestrator', `── Executing step ${planIdx + 1}/${planSteps.length}: ${stepDesc} ──`);
 
-      // Inject a user message telling the agent which step to execute
-      const stepInstruction = planIdx === 0
-        ? userMessage // First step uses the original query
-        : `Continue with step ${planIdx + 1}: "${stepDesc}"`;
+      // Ralph Loop: retry if model exits without acting
+      const MAX_RETRIES = 2;
+      let stepCompleted = false;
 
-      const messages = planIdx === 0
-        ? conversationMessages
-        : [...conversationMessages, { role: 'user', content: stepInstruction }];
+      for (let retry = 0; retry <= MAX_RETRIES && !stepCompleted; retry++) {
+        const stepInstruction = retry === 0
+          ? (planIdx === 0 ? userMessage : `Continue with step ${planIdx + 1}: "${stepDesc}"`)
+          : `You have not completed step ${planIdx + 1}: "${stepDesc}". Continue working on it. Do not skip it.`;
 
-      const result = await generateText({
-        model: getModel(),
-        system: systemPrompt,
-        messages,
-        tools,
-        stopWhen: stepCountIs(maxStepsPerPlanStep),
-        onStepFinish: (stepData) => {
-          totalStepCount++;
-          const { toolCalls } = stepData;
+        const messages = planIdx === 0 && retry === 0
+          ? conversationMessages
+          : [...conversationMessages, { role: 'user', content: stepInstruction }];
 
-          if (toolCalls?.length) {
-            allToolCalls.push(
-              ...toolCalls.map((tc) => ({
-                tool: tc.toolName,
-                args: tc.args,
-              }))
-            );
-          }
+        const result = await generateText({
+          model: getModel(),
+          system: systemPrompt,
+          messages,
+          tools,
+          stopWhen: stepCountIs(maxStepsPerPlanStep),
+          onStepFinish: (stepData) => {
+            totalStepCount++;
+            const { toolCalls } = stepData;
 
-          // Fire onStep callback for typing indicator etc.
-          if (context.onStep) {
-            context.onStep({ step: totalStepCount, ...stepData });
-          }
-        },
-      });
+            if (toolCalls?.length) {
+              allToolCalls.push(
+                ...toolCalls.map((tc) => ({
+                  tool: tc.toolName,
+                  args: tc.args,
+                }))
+              );
+            }
 
-      // Carry conversation forward so next step has context
-      if (result.response?.messages) {
-        conversationMessages = [...conversationMessages, ...result.response.messages];
-      }
+            if (context.onStep) {
+              context.onStep({ step: totalStepCount, ...stepData });
+            }
+          },
+        });
 
-      // Capture the text from the last step that produced text
-      if (result.text) {
-        lastStepText = result.text;
+        // Carry conversation forward
+        if (result.response?.messages) {
+          conversationMessages = [...conversationMessages, ...result.response.messages];
+        }
+
+        if (result.text) {
+          lastStepText = result.text;
+        }
+
+        // Check if model actually did work
+        const madeToolCalls = result.response?.messages?.some(m =>
+          m.role === 'assistant' && m.content?.some?.(c => c.type === 'tool-call')
+        );
+        const producedText = result.text && result.text.trim().length > 0;
+
+        // Step is done if: model produced text OR made tool calls OR exhausted retries
+        if (producedText || madeToolCalls || retry === MAX_RETRIES) {
+          stepCompleted = true;
+        } else {
+          logger.warn('Orchestrator', `Step ${planIdx + 1} retry ${retry + 1}/${MAX_RETRIES}: no output detected`);
+        }
       }
 
       // ── Mark this plan step as DONE ──
@@ -190,6 +207,9 @@ export async function runAgent(userMessage, context = {}) {
     logger.info('Orchestrator', `Completed in ${totalStepCount} steps, ${allToolCalls.length} tool calls`);
 
     let finalText = lastStepText || 'Done — no output to show.';
+
+    // Strip stubborn LLM prefixes like "Step 9 Complete:" or "Step 1:"
+    finalText = finalText.replace(/^(?:\*\*.*?\*\*|\s)*(?:Step\s+\d+(?:\s*Complete)?|Completed[^\n]*?):?\s*/im, '').trim();
 
     // Truncate to Discord limit
     if (finalText.length > 1900) {

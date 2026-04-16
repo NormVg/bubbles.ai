@@ -24,34 +24,34 @@ Bubbles follows an **Orchestrator-Worker** loop architecture, augmented with per
 ### System Flow
 ```mermaid
 graph TD
-    User([Discord User]) -->|@Mention| Discord[index.js]
+    User(["Discord User"]) -->|"@Mention"| Discord["index.js"]
 
-    subgraph Bubbles Architecture
-        Discord -->|Message & Context| Orchestrator[Orchestrator / agents/orchestrator.js]
+    subgraph BubblesArchitecture ["Bubbles Architecture"]
+        Discord -->|"Message & Context"| Orchestrator["Orchestrator / agents/orchestrator.js"]
 
-        Orchestrator -->|1. Generate Plan| LLM[LLM Provider]
-        LLM -->|Plan Steps| Orchestrator
+        Orchestrator -->|"1. Generate Plan"| LLM["LLM Provider"]
+        LLM -->|"Plan Steps"| Orchestrator
 
-        Orchestrator -->|2. Build System Prompt| PromptBuilder[prompts/system.js]
-        PromptBuilder -->|Read Profile/Rules| Soul[.bubbles/spec/soul.md]
+        Orchestrator -->|"2. Build System Prompt"| PromptBuilder["prompts/system.js"]
+        PromptBuilder -->|"Read Profile/Rules"| Soul[".bubbles/spec/soul.md"]
 
-        Orchestrator -->|3. Execute Step Loop| ToolLoop[Tool Execution Loop]
+        Orchestrator -->|"3. Execute Step Loop"| ToolLoop["Tool Execution Loop"]
 
-        ToolLoop <-->|Execute Tools| Tools[tools/index.js]
+        ToolLoop <-->|"Execute Tools"| Tools["tools/index.js"]
 
-        Tools -.-> FS[FileSystem]
-        Tools -.-> Web[Web & Puppeteer]
-        Tools -.-> MemoryStore[Memory Engine / core/memoryStore.js]
-        Tools -.-> Cmd[Shell / Terminal]
+        Tools -.-> FS["FileSystem"]
+        Tools -.-> Web["Web & Puppeteer"]
+        Tools -.-> MemoryStore["Memory Engine / core/memoryStore.js"]
+        Tools -.-> Cmd["Shell / Terminal"]
     end
 
-    ToolLoop -->|4. Final Output| Discord
+    ToolLoop -->|"4. Final Output"| Discord
 
-    subgraph Memory Architecture
-        MemoryStore -->|Read/Write YAML+MD| EPS[episodic/]
-        MemoryStore -->|Read/Write| KNL[knowledge/]
-        MemoryStore -->|Read/Write| PRJ[projects/]
-        MemoryStore -->|System State| SYS[system/]
+    subgraph MemoryArchitecture ["Memory Architecture"]
+        MemoryStore -->|"Read/Write YAML+MD"| EPS["episodic/"]
+        MemoryStore -->|"Read/Write"| KNL["knowledge/"]
+        MemoryStore -->|"Read/Write"| PRJ["projects/"]
+        MemoryStore -->|"System State"| SYS["system/"]
     end
 ```
 

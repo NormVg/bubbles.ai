@@ -181,4 +181,6 @@ The agent discovers skills at startup (names + descriptions only) and loads full
 
 ## License
 
-ISC
+**Personal Use Non-Commercial License**
+
+This project is licensed for personal, non-commercial use only. You may modify and use it for your own personal projects, but it may not be used for commercial purposes, sold, or distributed for profit. See the [LICENSE](LICENSE) file for complete details.

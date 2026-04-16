@@ -22,7 +22,7 @@ An autonomous AI agent powered by **Ollama + AI SDK**, controlled via Discord @m
 Bubbles follows an **Orchestrator-Worker** loop architecture, augmented with persistent memory and dynamic skills.
 
 ### System Flow
-\`\`\`mermaid
+```mermaid
 graph TD
     User([Discord User]) -->|@Mention| Discord[index.js]
 
@@ -53,11 +53,11 @@ graph TD
         MemoryStore -->|Read/Write| PRJ[projects/]
         MemoryStore -->|System State| SYS[system/]
     end
-\`\`\`
+```
 
 ### Directory Structure
 
-\`\`\`
+```
 bubbles.ai/
 ├── index.js              # Discord bot, message handling logic
 ├── config.js             # Centralized configuration (ENV wrappers)
@@ -90,7 +90,7 @@ bubbles.ai/
 │   ├── .context/         # Overflow context dumps for tools (context rot prevention)
 │   └── .logs/            # Searchable JSONL interaction logs
 └── start.sh              # Auto-restart daemon wrapper
-\`\`\`
+```
 
 ## Setup
 

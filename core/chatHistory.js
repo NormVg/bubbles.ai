@@ -62,14 +62,11 @@ export async function addToHistory(userMessage, assistantResponse) {
     { role: 'assistant', content: assistantResponse || '(no response)' }
   );
 
-  // Check if we need to archive
-  if (history.length >= MAX_HISTORY * 2) {
+  // Check if we need to archive (message count OR char limit)
+  const charOverflow = totalChars(history) > MAX_TOTAL_CHARS;
+  if (history.length >= MAX_HISTORY * 2 || charOverflow) {
+    if (charOverflow) logger.warn('ChatHistory', 'Char limit hit — triggering archival instead of silent drop');
     await archiveHistory();
-  } else {
-    // Trim by char count
-    while (totalChars(history) > MAX_TOTAL_CHARS && history.length > 2) {
-      history = history.slice(2);
-    }
   }
 
   // Fire-and-forget persistence

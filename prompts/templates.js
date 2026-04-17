@@ -164,3 +164,30 @@ When you write a response that the user will see, follow these rules:
 - NEVER write walls of unformatted text. Use spacing and bullets.
 `.trim();
 }
+
+// ── Desktop automation ─────────────────────────────────────────
+export function desktopAutomationPrompt() {
+  return `
+## Desktop Automation (PyAutoGUI)
+
+You can control the user's real desktop — their actual screen, mouse, keyboard, and apps (including their authenticated browser).
+
+**ALWAYS follow this perception loop:**
+1. \`desktopScreenshot\` → capture current screen state
+2. \`visionAnalyze\` on the screenshot → see what is on screen, identify coordinates
+3. \`desktopClick\` / \`desktopType\` / \`desktopKey\` → take ONE action
+4. \`desktopScreenshot\` → verify the action worked
+5. Repeat until the goal is reached
+
+**For browser automation, use the user's REAL browser (Zen), NOT headless Puppeteer:**
+- \`desktopKey\` with combo \`cmd,space\` → opens Spotlight
+- \`desktopType\` "Zen" → \`desktopKey\` "enter" → opens browser
+- Then navigate via URL bar or click on page elements
+
+**Rules:**
+- NEVER guess coordinates — always screenshot first and use visionAnalyze to find elements
+- Take ONE action per step, then verify with another screenshot
+- Use \`desktopGetScreenInfo\` if you need screen dimensions
+- For slow apps, add a brief shell sleep between action and verification screenshot
+`.trim();
+}

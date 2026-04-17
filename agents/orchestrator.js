@@ -53,7 +53,7 @@ Medium request (3-6 steps):
 
 Complex request (6-15 steps):
 "build a music player website with Vue3" → ["Scaffold Vue 3 project with Vite","Install dependencies","Create App layout with header and player area","Build file upload component","Implement audio player with controls","Add playlist/track list display","Add volume and progress controls","Style with dark minimal aesthetic","Test the application","Send project files to user"]`,
-      prompt: query,
+      messages: [{ role: 'user', content: query }],
     });
 
     const raw = planResult.text.trim();
@@ -93,16 +93,35 @@ Complex request (6-15 steps):
  * @returns {Promise<{ text: string, steps: number, toolCalls: Array }>}
  */
 export async function runAgent(userMessage, context = {}) {
+  // ── Build multimodal userMessage ──
+  let primaryContent;
+  if (context.visionFiles && context.visionFiles.length > 0) {
+    primaryContent = [];
+    if (userMessage) {
+      primaryContent.push({ type: 'text', text: userMessage });
+    } else {
+      primaryContent.push({ type: 'text', text: 'Analyze the attached image(s).' });
+    }
+    for (const vFile of context.visionFiles) {
+      primaryContent.push({
+        type: 'image',
+        image: vFile.buffer,
+      });
+    }
+  } else {
+    primaryContent = userMessage || 'Hello';
+  }
+
   const skills = await ensureSkillsDiscovered();
   const tools = buildTools({ skills });
 
-  logger.info('Orchestrator', `Processing query: "${userMessage.slice(0, 100)}..."`);
+  logger.info('Orchestrator', `Processing query: "${userMessage?.slice(0, 100) || 'Image provided'}..."`);
   logger.debug('Orchestrator', `Skills available: ${skills.length}, Tools: ${Object.keys(tools).join(', ')}`);
 
-  taskManager.setContext(userMessage);
+  taskManager.setContext(userMessage || "Image provided");
 
   // ── Pass 1: Generate upfront plan & show in Discord ────────────
-  const planSteps = await generatePlanSteps(userMessage);
+  const planSteps = await generatePlanSteps(primaryContent);
   taskManager.createPlan(planSteps);
 
   // Log the full plan to terminal
@@ -118,7 +137,7 @@ export async function runAgent(userMessage, context = {}) {
   // Conversation history carries context between steps
   let conversationMessages = [
     ...(context.history || []),
-    { role: 'user', content: userMessage },
+    { role: 'user', content: primaryContent },
   ];
 
   const systemPrompt = await buildSystemPrompt({

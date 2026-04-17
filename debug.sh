@@ -4,7 +4,8 @@ echo "Starting Discord Bot Auto-Restarter..."
 # Loop indefinitely to keep the bot alive
 while true; do
     echo "[$(date)] Starting bot process..."
-    LOG_LEVEL=debug node index.js
+    export LOG_LEVEL=debug
+    node index.js
     EXIT_CODE=$?
 
     echo "[$(date)] Bot process exited with code $EXIT_CODE"

@@ -21,10 +21,20 @@
       "sourceType": "github",
       "computedHash": "cfbc539377088ca7e44a813b30c306327385bbd973cd7a721e1743f60837dd62"
     },
+    "pyautogui-automation": {
+      "source": "steelan9199/wechat-publisher",
+      "sourceType": "github",
+      "computedHash": "ba0f699791ebafc55b5a7423eebab968190e0de03186e9c724e68129bd61fb8d"
+    },
     "skill-creator": {
       "source": "anthropics/skills",
       "sourceType": "github",
       "computedHash": "b122f4d1e91aa1d83027e050b5b37c3156203ee85458d7b1360bc48167c9e02a"
+    },
+    "usecomputer": {
+      "source": "remorses/usecomputer",
+      "sourceType": "github",
+      "computedHash": "52e202f0e5a48c2c22b031e7142d8f7f916919da7dd238b106cd60a2993049b3"
     }
   }
 }

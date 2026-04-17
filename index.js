@@ -104,6 +104,7 @@ async function extractMessageContent(message) {
   let text = message.content.replace(/<@!?\d+>/g, '').trim();
 
   const extraParts = [];
+  const visionFiles = [];
 
   // Handle attachments (files, images)
   if (message.attachments.size > 0) {
@@ -114,12 +115,20 @@ async function extractMessageContent(message) {
 
         // For text-like files, read the content
         const textExtensions = ['.txt', '.js', '.ts', '.py', '.json', '.md', '.yml', '.yaml', '.toml', '.sh', '.css', '.html', '.xml', '.csv', '.log', '.env.example'];
+        const imageExtensions = ['.png', '.jpg', '.jpeg', '.webp', '.gif'];
+
         const isTextFile = textExtensions.some((ext) => attachment.name.toLowerCase().endsWith(ext));
+        const isImageFile = imageExtensions.some((ext) => attachment.name.toLowerCase().endsWith(ext));
 
         if (isTextFile) {
           const { readFile } = await import('fs/promises');
           const content = await readFile(filePath, 'utf-8');
           attachmentInfo.push(`**File: ${attachment.name}**\n\`\`\`\n${content.slice(0, 3000)}\n\`\`\``);
+        } else if (isImageFile) {
+          const { readFile } = await import('fs/promises');
+          const buffer = await readFile(filePath);
+          visionFiles.push({ buffer, mimeType: attachment.contentType || 'image/jpeg' });
+          attachmentInfo.push(`**Image: ${attachment.name}** (passed securely to vision model)`);
         } else {
           attachmentInfo.push(`**File: ${attachment.name}** (saved to ${filePath}, ${attachment.size} bytes)`);
         }
@@ -146,7 +155,7 @@ async function extractMessageContent(message) {
   }
 
   const extraContext = extraParts.length > 0 ? extraParts.join('\n\n') : null;
-  return { text, extraContext };
+  return { text, extraContext, visionFiles };
 }
 
 // ── Helper: Split Long Messages ────────────────────────────────
@@ -250,9 +259,9 @@ client.on('messageCreate', async (message) => {
     }, 8000);
 
     // Extract text and any attachments/references
-    const { text, extraContext } = await extractMessageContent(message);
+    const { text, extraContext, visionFiles } = await extractMessageContent(message);
 
-    if (!text && !extraContext) {
+    if (!text && !extraContext && (!visionFiles || visionFiles.length === 0)) {
       clearInterval(typingInterval);
       activeRequests.delete(message.id);
       await message.reply("Hey! Mention me with a message and I'll help you out. 🫧");
@@ -289,6 +298,7 @@ client.on('messageCreate', async (message) => {
 
     const result = await runAgent(text, {
       extraContext,
+      visionFiles,
       history,
       onStep: () => {
         // Keep typing indicator alive during multi-step operations

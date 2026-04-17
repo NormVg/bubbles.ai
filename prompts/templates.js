@@ -94,7 +94,9 @@ export function toolUsagePrompt() {
 - \`memoryCapture\` — get ASCII tree of the entire memory directory
 
 **Automation (Persistent Scheduled Tasks):**
-- \`createAutomation\` — create a recurring task (cron/interval/file-watcher). Runs through the full agent with all tools. Auto-tests after creation.
+- \`createAutomation\` — **ONE tool call** to set up a recurring task. Do NOT create folders, scripts, or files — the tool handles everything.
+  - The \`task\` param is the full natural-language prompt the agent executes each time
+  - Example: \`createAutomation({ name: "stock-report", triggerType: "cron", schedule: "0 9 * * *", task: "Search for Nifty 50 price and send a summary", channelId: "123" })\`
 - \`listAutomations\` — see all automations and their run counts
 - \`toggleAutomation\` / \`removeAutomation\` — manage automations
 - \`triggerAutomation\` — manually fire one for testing
@@ -103,11 +105,13 @@ export function toolUsagePrompt() {
 - \`forgeTool\` — create a reusable custom tool (script-backed, persists to disk)
 - \`listForged\` / \`removeForged\` — manage custom tools
 
-**Anti-patterns:**
+**Anti-patterns (NEVER do these):**
+- Creating workspace folders or scripts for automations — use \`createAutomation\` directly
 - Describing actions instead of executing them
-- Writing files outside ./workspace/
+- Writing files outside ./workspace/<project>/
 - Retrying identical failing commands
 - Using shell for simple file reads (use readFile)
+- Using \`bgRun\` when \`createAutomation\` is more appropriate (bg = one-off, automation = recurring)
 `.trim();
 }
 

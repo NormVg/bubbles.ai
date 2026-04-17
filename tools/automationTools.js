@@ -1,8 +1,12 @@
 /**
  * Automation Tools — agent-facing tools for managing automations.
  *
+ * IMPORTANT: Automations are NOT projects. The agent should NEVER create
+ * workspace folders, scripts, or files for automations. The `createAutomation`
+ * tool is a single call that sets up everything internally.
+ *
  * Tools:
- *   createAutomation   — create a new automation with trigger + task
+ *   createAutomation   — ONE tool call to create a complete automation
  *   listAutomations    — list all automations and their status
  *   toggleAutomation   — enable/disable an automation
  *   removeAutomation   — delete an automation
@@ -23,37 +27,43 @@ import logger from '../core/logger.js';
 // ── createAutomation ─────────────────────────────────────────────
 export const createAutomationTool = tool({
   description:
-    'Create a persistent automation that runs automatically on a schedule or trigger. ' +
-    'The automation runs through the full agent stack with access to ALL tools. ' +
+    'Create a persistent automation in ONE call. Do NOT create workspace folders, scripts, or files — ' +
+    'this tool handles everything internally. The "task" parameter is a natural language prompt that the ' +
+    'full agent will execute each time the automation fires (with access to all tools like webSearch, memoryWrite, etc.). ' +
     'Trigger types: "cron" (cron expression), "interval" (every N minutes), "watch" (file/folder changes). ' +
-    'After creation, the automation is automatically test-fired to verify it works.',
+    'After creation, a quick validation is run to verify the config is correct.',
   parameters: z.object({
     name: z.string().describe('Unique name in kebab-case (e.g. "stock-morning-report", "inbox-watcher")'),
-    description: z.string().describe('What this automation does — shown in listings'),
-    triggerType: z.enum(['cron', 'interval', 'watch']).describe('Type of trigger'),
-    schedule: z.string().optional().describe('For cron: cron expression (e.g. "0 9 * * *"). For interval: not needed.'),
+    description: z.string().describe('What this automation does'),
+    triggerType: z.enum(['cron', 'interval', 'watch']).describe('Trigger type: cron, interval, or watch'),
+    schedule: z.string().optional().describe('For cron: cron expression like "0 9 * * *" or "*/30 * * * *"'),
     minutes: z.number().optional().describe('For interval: how often in minutes (e.g. 30)'),
     watchPath: z.string().optional().describe('For watch: relative path to watch (e.g. "./workspace/inbox/")'),
-    task: z.string().describe('The full task prompt — what the agent should do when triggered. Be specific and detailed.'),
+    task: z.string().describe(
+      'The FULL task prompt the agent executes when triggered. Be detailed and specific. ' +
+      'Example: "Search for the current Nifty 50 price using webSearch, then send me a 3-line summary with the price, change, and trend."'
+    ),
     channelId: z.string().describe('Discord channel ID where results should be sent'),
   }),
   execute: async ({ name, description, triggerType, schedule, minutes, watchPath, task, channelId }) => {
-    // Validate triggerType upfront — LLMs sometimes omit or mismatch this
+    // Validate triggerType
     if (!triggerType || !['cron', 'interval', 'watch'].includes(triggerType)) {
       return { success: false, error: `Invalid triggerType "${triggerType}". Must be one of: cron, interval, watch.` };
     }
 
+    // Validate trigger-specific params
+    if (triggerType === 'cron' && !schedule) {
+      return { success: false, error: 'Cron trigger requires a "schedule" param (e.g. "0 9 * * *").' };
+    }
+    if (triggerType === 'watch' && !watchPath) {
+      return { success: false, error: 'Watch trigger requires a "watchPath" param (e.g. "./workspace/inbox/").' };
+    }
+
     // Build trigger config
     const trigger = { type: triggerType };
-    if (triggerType === 'cron') {
-      if (!schedule) return { success: false, error: 'Cron trigger requires a "schedule" (cron expression).' };
-      trigger.schedule = schedule;
-    } else if (triggerType === 'interval') {
-      trigger.minutes = minutes || 15;
-    } else if (triggerType === 'watch') {
-      if (!watchPath) return { success: false, error: 'Watch trigger requires a "watchPath".' };
-      trigger.path = watchPath;
-    }
+    if (triggerType === 'cron') trigger.schedule = schedule;
+    else if (triggerType === 'interval') trigger.minutes = minutes || 15;
+    else if (triggerType === 'watch') trigger.path = watchPath;
 
     try {
       const def = await createAutomation({
@@ -65,27 +75,16 @@ export const createAutomationTool = tool({
         enabled: true,
       });
 
-      // Auto-verification: fire a silent test run (dryRun = never posts to Discord)
-      logger.info('AutomationTools', `Auto-testing "${name}" (dry run)...`);
-      const testResult = await triggerAutomation(name, { dryRun: true });
-
       return {
         success: true,
         automation: {
           name: def.name,
+          description: def.description,
           trigger: def.trigger,
           enabled: def.enabled,
           createdAt: def.createdAt,
         },
-        testRun: {
-          success: testResult.success,
-          output: testResult.output?.slice(0, 300),
-          error: testResult.error,
-          durationMs: testResult.durationMs,
-        },
-        message: testResult.success
-          ? `✅ Automation "${name}" created and verified! Test run passed in ${(testResult.durationMs / 1000).toFixed(1)}s.`
-          : `⚠️ Automation "${name}" created but test run had issues: ${testResult.error || 'check output'}`,
+        message: `✅ Automation "${name}" created and scheduled! It will fire based on the ${triggerType} trigger and send results to the configured Discord channel.`,
       };
     } catch (err) {
       return { success: false, error: `Failed to create automation: ${err.message}` };
@@ -95,25 +94,23 @@ export const createAutomationTool = tool({
 
 // ── listAutomations ──────────────────────────────────────────────
 export const listAutomationsTool = tool({
-  description: 'List all automations with their status, trigger type, schedule, last run time, and run count.',
+  description: 'List all automations with their status, trigger, last run time, and run count.',
   parameters: z.object({}),
   execute: async () => {
     const automations = listAllAutomations();
+    if (automations.length === 0) return { automations: [], message: 'No automations created yet.' };
 
-    if (automations.length === 0) {
-      return { automations: [], message: 'No automations created yet.' };
-    }
-
-    const list = automations.map(a => ({
-      name: a.name,
-      description: a.description,
-      trigger: a.trigger,
-      enabled: a.enabled,
-      lastRun: a.lastRun || 'never',
-      runCount: a.runCount || 0,
-    }));
-
-    return { automations: list, count: list.length };
+    return {
+      automations: automations.map(a => ({
+        name: a.name,
+        description: a.description,
+        trigger: a.trigger,
+        enabled: a.enabled,
+        lastRun: a.lastRun || 'never',
+        runCount: a.runCount || 0,
+      })),
+      count: automations.length,
+    };
   },
 });
 
@@ -121,32 +118,26 @@ export const listAutomationsTool = tool({
 export const toggleAutomationTool = tool({
   description: 'Enable or disable an automation without deleting it.',
   parameters: z.object({
-    name: z.string().describe('Name of the automation to toggle'),
-    enabled: z.boolean().describe('Set to true to enable, false to disable'),
+    name: z.string().describe('Automation name'),
+    enabled: z.boolean().describe('true to enable, false to disable'),
   }),
-  execute: async ({ name, enabled }) => {
-    return toggleAutomation(name, enabled);
-  },
+  execute: async ({ name, enabled }) => toggleAutomation(name, enabled),
 });
 
 // ── removeAutomation ─────────────────────────────────────────────
 export const removeAutomationTool = tool({
-  description: 'Permanently delete an automation and its schedule/watcher.',
+  description: 'Permanently delete an automation.',
   parameters: z.object({
-    name: z.string().describe('Name of the automation to delete'),
+    name: z.string().describe('Automation name to delete'),
   }),
-  execute: async ({ name }) => {
-    return removeAutomation(name);
-  },
+  execute: async ({ name }) => removeAutomation(name),
 });
 
 // ── triggerAutomation ────────────────────────────────────────────
 export const triggerAutomationTool = tool({
-  description: 'Manually fire an automation right now, regardless of its schedule. Great for testing.',
+  description: 'Manually fire an automation right now — great for testing. Results are sent to Discord.',
   parameters: z.object({
-    name: z.string().describe('Name of the automation to trigger'),
+    name: z.string().describe('Automation name to trigger'),
   }),
-  execute: async ({ name }) => {
-    return triggerAutomation(name);
-  },
+  execute: async ({ name }) => triggerAutomation(name),
 });

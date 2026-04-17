@@ -1,0 +1,15 @@
+{
+  "name": "getTime",
+  "description": "Get the current time in a specified timezone. Takes a timezone parameter (e.g., 'Asia/Tokyo', 'America/New_York', 'Europe/London') and returns the current date and time in that timezone.",
+  "parameters": {
+    "type": "object",
+    "properties": {
+      "timezone": {
+        "type": "string",
+        "description": "The timezone identifier (e.g., 'Asia/Tokyo', 'America/New_York', 'Europe/London')"
+      }
+    },
+    "required": ["timezone"]
+  },
+  "script": "getTime.py"
+}

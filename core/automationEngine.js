@@ -272,9 +272,9 @@ async function executeAutomation(def, triggerContext = {}, dryRun = false) {
     const result = await runAgent(taskPrompt, {
       extraContext: `This is an automated background task named "${def.name}".
 CRITICAL AUTOMATION RULES:
-1. Your final text output will be AUTOMATICALLY delivered to the Discord channel.
-2. DO NOT attempt to find or use a tool to send messages to Discord yourself.
-3. Simply gather the requested information and format it nicely in your final response.
+1. Gather the requested information and format it nicely as your ONLY response.
+2. DO NOT attempt to use any tools to send messages (e.g. to Discord). Your text is routed automatically.
+3. DO NOT include meta-commentary about the delivery mechanism, automation rules, or that the message will be sent. Just output the raw requested data.
 4. Do not use emojis in your text output unless explicitly asked to. Use professional formatting.
 Description of this task: ${def.description || ''}`,
     });

@@ -174,39 +174,61 @@ export async function runAgent(userMessage, context = {}) {
           ? getVisionModel()
           : getModel();
 
-        const result = await generateText({
-          model: activeModel,
-          system: systemPrompt,
-          messages,
-          tools,
-          stopWhen: stepCountIs(maxStepsPerPlanStep),
-          onStepFinish: (stepData) => {
-            totalStepCount++;
-            const { toolCalls, toolResults } = stepData;
+        let result;
+        try {
+          result = await generateText({
+            model: activeModel,
+            system: systemPrompt,
+            messages,
+            tools,
+            stopWhen: stepCountIs(maxStepsPerPlanStep),
+            onStepFinish: (stepData) => {
+              totalStepCount++;
+              const { toolCalls, toolResults } = stepData;
 
-            if (toolCalls?.length) {
-              allToolCalls.push(
-                ...toolCalls.map((tc) => ({
-                  tool: tc.toolName,
-                  args: tc.args,
-                }))
-              );
-            }
-
-            if (toolResults?.length) {
-              for (const res of toolResults) {
-                let outStr = typeof res.result === 'object' ? JSON.stringify(res.result) : String(res.result || 'Executed');
-                outStr = outStr.replace(/\n/g, ' ').slice(0, 80);
-                taskManager.logTool(res.toolName, outStr + (outStr.length >= 80 ? '...' : ''));
-                logger.info('ToolOutput', `[${res.toolName}] => ${outStr}${outStr.length >= 80 ? '...' : ''}`);
+              if (toolCalls?.length) {
+                allToolCalls.push(
+                  ...toolCalls.map((tc) => ({
+                    tool: tc.toolName,
+                    args: tc.args,
+                  }))
+                );
               }
-            }
 
-            if (context.onStep) {
-              context.onStep({ step: totalStepCount, ...stepData });
+              if (toolResults?.length) {
+                for (const res of toolResults) {
+                  let outStr = typeof res.result === 'object' ? JSON.stringify(res.result) : String(res.result || 'Executed');
+                  outStr = outStr.replace(/\n/g, ' ').slice(0, 80);
+                  taskManager.logTool(res.toolName, outStr + (outStr.length >= 80 ? '...' : ''));
+                  logger.info('ToolOutput', `[${res.toolName}] => ${outStr}${outStr.length >= 80 ? '...' : ''}`);
+                }
+              }
+
+              if (context.onStep) {
+                context.onStep({ step: totalStepCount, ...stepData });
+              }
+            },
+          });
+        } catch (stepError) {
+          const errMsg = stepError.message || '';
+          if (errMsg.includes('prompt too long') || errMsg.includes('context length') || errMsg.includes('maximum context')) {
+            logger.warn('Orchestrator', 'Context length overflowed. Pruning conversation history and retrying...');
+            if (conversationMessages.length > 4) {
+              // Keep the initial user request, inject a warning, and keep the last 2 interactions
+              conversationMessages = [
+                conversationMessages[0],
+                { role: 'system', content: '[SYSTEM LOG]: Previous conversation history pruned to prevent context overflow. You must continue your current task without context of earlier steps.' },
+                ...conversationMessages.slice(-2)
+              ];
+              retry--; // Retry this iteration without incrementing the counter
+              continue;
+            } else {
+              logger.error('Orchestrator', 'Cannot prune further. Single step payload is too large.');
+              throw stepError;
             }
-          },
-        });
+          }
+          throw stepError; // Rethrow other errors
+        }
 
         // Carry conversation forward
         if (result.response?.messages) {

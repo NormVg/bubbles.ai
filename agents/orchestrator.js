@@ -114,7 +114,7 @@ export async function runAgent(userMessage, context = {}) {
 
   const skills = await ensureSkillsDiscovered();
   loadCustomTools();  // Load any previously forged custom tools
-  const tools = buildTools({ skills });
+  const tools = buildTools({ skills, channelId: context.channelId });
 
   logger.info('Orchestrator', `Processing query: "${userMessage?.slice(0, 100) || 'Image provided'}..."`);
   logger.debug('Orchestrator', `Skills available: ${skills.length}, Tools: ${Object.keys(tools).join(', ')}`);

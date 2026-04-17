@@ -59,9 +59,16 @@ export function toolUsagePrompt() {
 ## Tool Strategy
 
 **Build / Create:**
-- \`shell\` — scaffolding (npx, npm init), installing deps, running builds/servers
 - \`writeFile\` — creating files (path must start with ./workspace/)
 - Always \`mkdir -p ./workspace/<project>/\` before writing files
+
+**Execution / Tasks (Crucial Distinction):**
+- \`shell\` — For **short, blocking** commands (creating folders, git, npm install, short scripts). The conversation waits for this to finish.
+- \`bgRun\` — For **long-running, continuous** tasks (dev servers, file watchers, web servers). This spawns a detached process and returns a Job ID immediately so the conversation can continue.
+  - *Example*: \`bgRun({ command: "npm run dev", cwd: "./workspace/my-app", label: "Vite Server" })\`
+- \`bgList\` — View running background processes.
+- \`bgRead(jobId)\` — Tail the recent logs/output of a background process.
+- \`bgKill(jobId)\` — Stop a background process.
 
 **Discover / Read:**
 - \`listDir\` — structured directory listing

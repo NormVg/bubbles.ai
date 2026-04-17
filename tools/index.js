@@ -13,6 +13,7 @@ import { createPlanTool, markStepTool } from './taskTools.js';
 import { webSearchTool, webScrapeTool } from './web.js';
 import { memoryReadTool, memoryWriteTool, memoryRecallTool, memoryListTool, memoryCaptureTool } from './memoryTools.js';
 import { visionAnalyzeTool } from './vision.js';
+import { bgRunTool, bgListTool, bgReadTool, bgKillTool } from './bgProcess.js';
 
 /** Core tools that are always available */
 export const coreTools = {
@@ -27,10 +28,13 @@ export const coreTools = {
   webScrape: webScrapeTool,
   memoryRead: memoryReadTool,
   memoryWrite: memoryWriteTool,
-  memoryRecall: memoryRecallTool,
   memoryList: memoryListTool,
   memoryCapture: memoryCaptureTool,
   visionAnalyze: visionAnalyzeTool,
+  bgRun: bgRunTool,
+  bgList: bgListTool,
+  bgRead: bgReadTool,
+  bgKill: bgKillTool,
 };
 
 /**

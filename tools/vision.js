@@ -51,7 +51,8 @@ export const visionAnalyzeTool = tool({
       logger.info('VisionTool', `Analyzing image: ${absPath}`);
       const buffer = await readFile(absPath);
 
-      const prompt = question || 'Describe this image in detail. Be specific about any text, UI elements, code, diagrams, or visual content present.';
+      const rawPrompt = question || 'Identify the core actionable elements in this image.';
+      const prompt = `${rawPrompt}\n\nCRITICAL CONSTRAINTS:\n- Be extremely concise.\n- Return ONLY the exact answer/information requested.\n- Do NOT output conversational filler, thoughts, or formatting.\n- Use the absolute minimum number of words possible.`;
 
       const result = await generateText({
         model: getVisionModel(),

@@ -60,7 +60,11 @@ print("Done!")
 
 ```
 
-### 3. Execution Phase
+### 3. Execution & Checkpointing (Phases)
+Do not write one monolithic script that relies on blind luck (like pressing `tab` 10 times and hoping it reaches the "Submit" button). UIs are dynamic and this is extremely brittle. Instead:
+- **Use App Hotkeys:** Pressing `command+enter` is universally "Submit" across web apps (Twitter, Slack, etc.) and is 100x safer than tabbing.
+- **Micro-Scripts / Checkpoints:** For complex flows, write Phase 1 (e.g., `script_p1_open.py`), run it, take a screenshot to verify and locate the exact pixel coordinates you need, then write Phase 2 (`script_p2_click.py`).
+
 - Run your script using the `shell` tool: `python3 run_automation.py`.
 - If the script fails, debug the stack trace and re-run.
 

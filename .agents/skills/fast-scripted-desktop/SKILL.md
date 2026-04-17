@@ -22,11 +22,18 @@ Write a Python script locally in the workspace (e.g., `automation_script.py`).
 - Import `pyautogui`, `time`, and any other standard libraries.
 - Rely on PyAutoGUI's keyboard shortcuts, like `pyautogui.hotkey('command', 'space')`, over explicitly finding icons. Hotkeys are significantly faster and 100% reliable.
 - Add generous `time.sleep(1)` or `time.sleep(2)` pauses between major actions (e.g., opening an app, waiting for a pageload, submitting a form) to ensure the system catches up. UI transitions take time.
-- Use `pyautogui.click(x, y)` and `pyautogui.write('text')`.
+- **Basic IO**: `pyautogui.click(x, y)`, `pyautogui.doubleClick(x, y)`, `pyautogui.rightClick(x, y)`, and `pyautogui.write('text')`.
+- **Advanced Control**:
+  - `pyautogui.scroll(amount, x=x, y=y)` to scroll interfaces.
+  - `pyautogui.dragTo(x, y, duration=1)` to drag-and-drop elements.
+- **Visual Intelligence**: Sub-skills for robust state verification:
+  - `pyautogui.pixelMatchesColor(x, y, (R, G, B), tolerance=10)` to check if a checkbox is checked, a button is enabled, a theme is dark, etc.
+  - `pyautogui.locateCenterOnScreen('reference.png', confidence=0.8)` to find dynamic visual elements if you have created a reference crop image. (Requires `pyscreeze` / `opencv-python` depending on confidence).
 - Ensure macOS keys are mapped (`command` instead of `cmd`).
 
 **Example Script (`run_automation.py`):**
 ```python
+
 import pyautogui
 import time
 
@@ -50,6 +57,7 @@ pyautogui.press('enter')
 time.sleep(5) # Wait for page load
 
 print("Done!")
+
 ```
 
 ### 3. Execution Phase

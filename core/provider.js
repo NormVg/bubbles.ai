@@ -20,5 +20,14 @@ export function getModel(modelId) {
   return ollama(modelId || config.OLLAMA_MODEL);
 }
 
+/**
+ * Get a model instance specifically for vision tasks.
+ * @param {string} [modelId] - Override model ID
+ * @returns {import('ai').LanguageModelV1}
+ */
+export function getVisionModel(modelId) {
+  return ollama(modelId || config.OLLAMA_VISION_MODEL);
+}
+
 export { ollama };
-export default { ollama, getModel };
+export default { ollama, getModel, getVisionModel };

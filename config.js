@@ -4,6 +4,7 @@ const config = {
   // ── Ollama / LLM ──────────────────────────────────────────────
   OLLAMA_BASE_URL: process.env.OLLAMA_BASE_URL || 'http://localhost:11434/api',
   OLLAMA_MODEL: process.env.OLLAMA_MODEL || 'llama3.2',
+  OLLAMA_VISION_MODEL: process.env.OLLAMA_VISION_MODEL || process.env.OLLAMA_MODEL || 'llama3.2-vision',
   OLLAMA_API_KEY: process.env.OLLAMA_API_KEY || '',
 
   // ── Discord ───────────────────────────────────────────────────

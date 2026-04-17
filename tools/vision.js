@@ -4,7 +4,7 @@ import { existsSync } from 'fs';
 import { tool } from 'ai';
 import { z } from 'zod';
 import { generateText } from 'ai';
-import { getModel } from '../core/provider.js';
+import { getVisionModel } from '../core/provider.js';
 import config from '../config.js';
 import logger from '../core/logger.js';
 
@@ -54,7 +54,7 @@ export const visionAnalyzeTool = tool({
       const prompt = question || 'Describe this image in detail. Be specific about any text, UI elements, code, diagrams, or visual content present.';
 
       const result = await generateText({
-        model: getModel(),
+        model: getVisionModel(),
         messages: [
           {
             role: 'user',

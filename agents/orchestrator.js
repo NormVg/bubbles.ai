@@ -1,5 +1,5 @@
 import { generateText, stepCountIs } from 'ai';
-import { getModel } from '../core/provider.js';
+import { getModel, getVisionModel } from '../core/provider.js';
 import { buildTools } from '../tools/index.js';
 import { buildSystemPrompt } from '../prompts/system.js';
 import { discoverSkills } from '../core/skillLoader.js';
@@ -170,8 +170,12 @@ export async function runAgent(userMessage, context = {}) {
           ? conversationMessages
           : [...conversationMessages, { role: 'user', content: stepInstruction }];
 
+        const activeModel = (context.visionFiles?.length > 0 && planIdx === 0 && retry === 0)
+          ? getVisionModel()
+          : getModel();
+
         const result = await generateText({
-          model: getModel(),
+          model: activeModel,
           system: systemPrompt,
           messages,
           tools,

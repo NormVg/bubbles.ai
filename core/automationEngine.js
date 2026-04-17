@@ -319,8 +319,7 @@ async function sendToDiscord(def, text) {
       return;
     }
 
-    const header = `**Automation: ${def.name}**\n`;
-    const content = header + (text || '(no output)');
+    const content = text || '(no output)';
 
     // Split if too long
     if (content.length <= 2000) {

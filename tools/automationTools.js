@@ -115,10 +115,10 @@ export const listAutomationsTool = tool({
 
 // ── toggleAutomation ─────────────────────────────────────────────
 export const toggleAutomationTool = tool({
-  description: 'Enable or disable an automation without deleting it.',
+  description: 'Pause (disable) or resume (enable) an ongoing automation. Use this when the user asks to pause, stop, or resume an automation.',
   parameters: z.object({
     name: z.string().describe('Automation name'),
-    enabled: z.boolean().describe('true to enable, false to disable'),
+    enabled: z.boolean().describe('true to resume/enable, false to pause/disable'),
   }),
   execute: async ({ name, enabled }) => toggleAutomation(name, enabled),
 });

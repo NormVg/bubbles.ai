@@ -98,7 +98,8 @@ export function toolUsagePrompt() {
   - The \`task\` param is the full natural-language prompt the agent executes each time
   - Example: \`createAutomation({ name: "stock-report", triggerType: "cron", schedule: "0 9 * * *", task: "Search for Nifty 50 price and send a summary" })\`
 - \`listAutomations\` — see all automations and their run counts
-- \`toggleAutomation\` / \`removeAutomation\` — manage automations
+- \`toggleAutomation\` — **pause** or **resume** an automation
+- \`removeAutomation\` — delete an automation
 - \`triggerAutomation\` — manually fire one for testing
 
 **Self-Evolution:**

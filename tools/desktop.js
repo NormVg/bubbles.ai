@@ -12,7 +12,7 @@ import { execSync } from 'child_process';
 import { resolve } from 'path';
 import logger from '../core/logger.js';
 
-const DESKTOP_PY = resolve('.bubbles/skills/desktop-use/scripts/desktop.py');
+const DESKTOP_PY = resolve('.agents/skills/desktop-use/scripts/desktop.py');
 
 /**
  * Run a desktop.py action and return parsed JSON.
@@ -106,17 +106,27 @@ export const desktopKeyTool = tool({
   description:
     'Press a single key or a hotkey combination. ' +
     'For single keys: enter, esc, tab, space, backspace, delete, up, down, left, right, f1-f12. ' +
-    'For combos: use comma-separated keys like "cmd,space" or "ctrl,shift,t".',
+    'For combos: use comma-separated keys like "command,space" or "ctrl,shift,t". ' +
+    'CRITICAL: On macOS, ALWAYS use "command" (not "cmd" or "win"). Valid modifiers: command, option, control, shift.',
   parameters: z.object({
     key: z.string().optional().describe('Single key to press (e.g. "enter", "esc", "tab")'),
-    combo: z.string().optional().describe('Hotkey combo, comma-separated (e.g. "cmd,space", "ctrl,c")'),
+    combo: z.string().optional().describe('Hotkey combo, comma-separated (e.g. "command,space", "command,c"). NEVER use "cmd" — use "command".'),
   }),
   execute: async ({ key, combo }) => {
     if (combo) {
-      return runDesktop('hotkey', ['--keys', combo]);
+      // Auto-correct common LLM hallucinations for macOS
+      const fixedCombo = combo.replace(/\bcmd\b/g, 'command').replace(/\bwin\b/g, 'command');
+      if (fixedCombo !== combo) {
+        logger.warn('Desktop', `Auto-corrected key combo: "${combo}" → "${fixedCombo}"`);
+      }
+      return runDesktop('hotkey', ['--keys', fixedCombo]);
     }
     if (key) {
-      return runDesktop('press_key', ['--key', key]);
+      const fixedKey = key.replace(/\bcmd\b/g, 'command').replace(/\bwin\b/g, 'command');
+      if (fixedKey !== key) {
+        logger.warn('Desktop', `Auto-corrected key: "${key}" → "${fixedKey}"`);
+      }
+      return runDesktop('press_key', ['--key', fixedKey]);
     }
     return { success: false, error: 'Provide either "key" or "combo"' };
   },

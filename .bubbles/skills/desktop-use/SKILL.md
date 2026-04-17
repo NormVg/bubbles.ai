@@ -50,7 +50,7 @@ python scripts/loop.py --plan plan.json --output-dir /tmp/my_run
 
 ```json
 [
-  {"action": "hotkey", "keys": "command,space"},
+  {"action": "hotkey", "keys": "cmd,space"},
   {"action": "sleep", "seconds": 0.5},
   {"action": "type_text", "text": "Terminal"},
   {"action": "press_key", "key": "enter"},
@@ -155,21 +155,19 @@ python scripts/desktop.py press_key --key tab
 # Hotkey / combo
 python scripts/desktop.py hotkey --keys ctrl,c
 python scripts/desktop.py hotkey --keys ctrl,shift,t
-python scripts/desktop.py hotkey --keys command,space   # macOS Spotlight
+python scripts/desktop.py hotkey --keys cmd,space      # macOS Spotlight
 
 # Shortcuts
-python scripts/desktop.py copy        # Ctrl+C / Command+C
-python scripts/desktop.py paste       # Ctrl+V / Command+V
-python scripts/desktop.py cut         # Ctrl+X / Command+X
-python scripts/desktop.py select_all  # Ctrl+A / Command+A
-python scripts/desktop.py undo        # Ctrl+Z / Command+Z
-python scripts/desktop.py redo        # Ctrl+Y / Command+Y
-python scripts/desktop.py save        # Ctrl+S / Command+S
+python scripts/desktop.py copy        # Ctrl+C / Cmd+C
+python scripts/desktop.py paste       # Ctrl+V / Cmd+V
+python scripts/desktop.py cut         # Ctrl+X / Cmd+X
+python scripts/desktop.py select_all  # Ctrl+A / Cmd+A
+python scripts/desktop.py undo        # Ctrl+Z / Cmd+Z
+python scripts/desktop.py redo        # Ctrl+Y / Cmd+Y
+python scripts/desktop.py save        # Ctrl+S / Cmd+S
 ```
 
-Common key names: `enter`, `esc`, `tab`, `space`, `backspace`, `delete`, `up`, `down`, `left`, `right`, `f1`–`f12`, `ctrl`, `alt`, `shift`, `command`, `option`
-
-> **CRITICAL (macOS):** NEVER use `cmd` or `win` as key names. You MUST use `command`. PyAutoGUI will silently fail or crash with invalid key strings.
+Common key names: `enter`, `esc`, `tab`, `space`, `backspace`, `delete`, `up`, `down`, `left`, `right`, `f1`–`f12`, `ctrl`, `alt`, `shift`, `win`, `cmd`, `option`
 
 ### Image Recognition (requires `opencv-python`)
 
@@ -238,7 +236,7 @@ python scripts/desktop.py sleep --seconds 1.5
 python scripts/desktop.py screenshot --output /tmp/s1.png
 
 # 2. Open Spotlight (macOS) / Start (Windows)
-python scripts/desktop.py hotkey --keys command,space
+python scripts/desktop.py hotkey --keys cmd,space
 
 # 3. Screenshot — verify Spotlight opened
 python scripts/desktop.py screenshot --output /tmp/s2.png

@@ -35,7 +35,12 @@ export const coreTools = {
   memoryList: memoryListTool,
   memoryCapture: memoryCaptureTool,
   visionAnalyze: visionAnalyzeTool,
-
+  desktopScreenshot: desktopScreenshotTool,
+  desktopClick: desktopClickTool,
+  desktopType: desktopTypeTool,
+  desktopKey: desktopKeyTool,
+  desktopScroll: desktopScrollTool,
+  desktopGetScreenInfo: desktopGetScreenInfoTool,
 };
 
 /**

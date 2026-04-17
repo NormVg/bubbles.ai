@@ -113,21 +113,27 @@ export const desktopKeyTool = tool({
     combo: z.string().optional().describe('Hotkey combo, comma-separated (e.g. "command,space", "command,c"). NEVER use "cmd" — use "command".'),
   }),
   execute: async ({ key, combo }) => {
+    // Normalize: auto-correct cmd/win → command
+    const fix = (s) => s.replace(/\bcmd\b/g, 'command').replace(/\bwin\b/g, 'command');
+
+    // If combo was provided, use hotkey
     if (combo) {
-      // Auto-correct common LLM hallucinations for macOS
-      const fixedCombo = combo.replace(/\bcmd\b/g, 'command').replace(/\bwin\b/g, 'command');
-      if (fixedCombo !== combo) {
-        logger.warn('Desktop', `Auto-corrected key combo: "${combo}" → "${fixedCombo}"`);
-      }
+      const fixedCombo = fix(combo);
+      if (fixedCombo !== combo) logger.warn('Desktop', `Auto-corrected combo: "${combo}" → "${fixedCombo}"`);
       return runDesktop('hotkey', ['--keys', fixedCombo]);
     }
+
     if (key) {
-      const fixedKey = key.replace(/\bcmd\b/g, 'command').replace(/\bwin\b/g, 'command');
-      if (fixedKey !== key) {
-        logger.warn('Desktop', `Auto-corrected key: "${key}" → "${fixedKey}"`);
+      const fixedKey = fix(key);
+      // Smart detection: if the "key" field contains a comma, it's actually a combo
+      if (fixedKey.includes(',')) {
+        logger.warn('Desktop', `Key "${key}" contains comma — auto-promoting to hotkey action`);
+        return runDesktop('hotkey', ['--keys', fixedKey]);
       }
+      if (fixedKey !== key) logger.warn('Desktop', `Auto-corrected key: "${key}" → "${fixedKey}"`);
       return runDesktop('press_key', ['--key', fixedKey]);
     }
+
     return { success: false, error: 'Provide either "key" or "combo"' };
   },
 });

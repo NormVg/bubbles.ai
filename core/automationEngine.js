@@ -159,14 +159,14 @@ export async function removeAutomation(name) {
 }
 
 /**
- * Manually trigger an automation right now.
+ * Manually trigger an automation right now. dryRun=true skips Discord posting.
  */
-export async function triggerAutomation(name) {
+export async function triggerAutomation(name, { dryRun = false } = {}) {
   const defPath = join(AUTOMATIONS_DIR, name, 'automation.json');
   if (!existsSync(defPath)) return { success: false, error: `Automation "${name}" not found.` };
 
   const def = JSON.parse(readFileSync(defPath, 'utf-8'));
-  return executeAutomation(def);
+  return executeAutomation(def, {}, dryRun);
 }
 
 // ── Internal: Scheduling ─────────────────────────────────────────
@@ -257,7 +257,7 @@ function unscheduleAutomation(name) {
 
 // ── Internal: Execution ──────────────────────────────────────────
 
-async function executeAutomation(def, triggerContext = {}) {
+async function executeAutomation(def, triggerContext = {}, dryRun = false) {
   const startTime = Date.now();
 
   // Build the task prompt with trigger context
@@ -282,9 +282,11 @@ async function executeAutomation(def, triggerContext = {}) {
     const defPath = join(AUTOMATIONS_DIR, def.name, 'automation.json');
     writeFileSync(defPath, JSON.stringify(def, null, 2));
 
-    // Send result to Discord if configured
-    if (def.output?.type === 'discord' && discordClient) {
+    // Send result to Discord if configured and not a dry run
+    if (!dryRun && def.output?.type === 'discord' && discordClient) {
       await sendToDiscord(def, result.text);
+    } else if (dryRun) {
+      logger.info('AutomationEngine', `[DryRun] Skipping Discord post for "${def.name}"`);
     }
 
     return {

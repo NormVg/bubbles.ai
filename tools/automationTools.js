@@ -38,6 +38,11 @@ export const createAutomationTool = tool({
     channelId: z.string().describe('Discord channel ID where results should be sent'),
   }),
   execute: async ({ name, description, triggerType, schedule, minutes, watchPath, task, channelId }) => {
+    // Validate triggerType upfront — LLMs sometimes omit or mismatch this
+    if (!triggerType || !['cron', 'interval', 'watch'].includes(triggerType)) {
+      return { success: false, error: `Invalid triggerType "${triggerType}". Must be one of: cron, interval, watch.` };
+    }
+
     // Build trigger config
     const trigger = { type: triggerType };
     if (triggerType === 'cron') {
@@ -60,9 +65,9 @@ export const createAutomationTool = tool({
         enabled: true,
       });
 
-      // Auto-verification: fire a test run immediately
-      logger.info('AutomationTools', `Auto-testing "${name}"...`);
-      const testResult = await triggerAutomation(name);
+      // Auto-verification: fire a silent test run (dryRun = never posts to Discord)
+      logger.info('AutomationTools', `Auto-testing "${name}" (dry run)...`);
+      const testResult = await triggerAutomation(name, { dryRun: true });
 
       return {
         success: true,

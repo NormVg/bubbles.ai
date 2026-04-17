@@ -29,17 +29,27 @@ export function workspacePrompt() {
   return `
 ## Workspace Discipline
 
-All files go inside \`./workspace/\` — never the bot root directory.
+All files go inside \`./workspace/\` — **never** in the bot root or any system directory.
 
-Before starting any project or task that creates files:
-1. Create a dedicated subfolder: \`./workspace/<project-name>/\`
-2. Use lowercase-kebab-case for folder names
-3. All tool calls must reference paths inside this subfolder
+**Every task that creates files MUST have its own named subfolder:**
+- Research on Godrej: \`./workspace/godrej-research/\`
+- Building a Vue app: \`./workspace/vue-todo-app/\`
+- GitHub profile audit: \`./workspace/github-normvg-audit/\`
+- System report: \`./workspace/system-info-report/\`
 
-Rules:
-- \`mkdir -p ./workspace/<name>\` FIRST, then \`cd\` into it for shell commands
-- \`writeFile\` paths must start with \`./workspace/\`
-- Never create files in \`.\`, \`./tools/\`, \`./agents/\`, or any bot directory
+The folder name must clearly reflect the **topic or task** (not generic names like \`files/\` or \`output/\`).
+
+**Workflow:**
+1. Before writing any file, decide the project name from the task context
+2. \`shell\`: \`mkdir -p ./workspace/<topic-name>/\`
+3. Write ALL resulting files inside that folder
+4. After completing, write a memory entry so this work can be found later
+
+**Rules:**
+- NEVER dump files directly in \`./workspace/\` root
+- Use lowercase-kebab-case: \`godrej-q3-analysis\`, not \`GodrejAnalysis\` or \`research1\`
+- \`writeFile\` paths must start with \`./workspace/<project-name>/\`
+- Never create files in \`.\`, \`./tools/\`, \`./agents/\`, or any system directory
 `.trim();
 }
 
@@ -88,9 +98,22 @@ export function toolUsagePrompt() {
 export function memoryUsagePrompt() {
   return `
 ## Long-Term Memory (.bubbles/memory/)
-- WRITE (after projects, new preferences, important facts): \`memoryWrite(type, name, content)\`
-- RECALL (user history, past projects): \`memoryRecall(keyword)\`
-- Types: projects, knowledge, tasks, episodic
+
+**Recalling past work:**
+- Before starting research or a project, call \`memoryRecall(topic)\` — the agent may have already done this
+- If a match is found, \`memoryRead(type, name)\` to load full details including the workspace folder path
+
+**Writing after completing any task with files or research:**
+- ALWAYS call \`memoryWrite\` at the end with:
+  - \`type\`: \`projects\` (for code/builds), \`knowledge\` (for research/analysis), \`episodic\` (for one-off tasks)
+  - \`name\`: kebab-case topic (e.g. \`godrej-q3-research\`, \`github-normvg-audit\`)
+  - \`content\`: summary of what was done, key findings, and **the exact workspace path** (e.g. \`workspace/godrej-research/\`)
+
+**Examples:**
+- After Godrej research: \`memoryWrite('knowledge', 'godrej-q3-research', 'Analysed Godrej Q3 results. Files in ./workspace/godrej-research/. Key finding: ...')\`
+- After building an app: \`memoryWrite('projects', 'vue-todo-app', 'Built a Vue 3 todo app. Files in ./workspace/vue-todo-app/. Stack: Vite + Vue 3.')\`
+
+- Types: \`projects\`, \`knowledge\`, \`tasks\`, \`episodic\`, \`system\`
 - Always append, never overwrite. Use kebab-case names.
 `.trim();
 }

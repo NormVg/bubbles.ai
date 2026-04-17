@@ -87,32 +87,11 @@ export function toolUsagePrompt() {
 // ── Memory usage ──────────────────────────────────────────────
 export function memoryUsagePrompt() {
   return `
-## Long-Term Memory
-
-You have a persistent memory system at \`.bubbles/memory/\`. Use it like a personal assistant's notebook.
-
-**When to WRITE to memory:**
-- After completing a project → \`memoryWrite("projects", "project-name", "what was built")\`
-- When the user shares a preference → \`memoryWrite("knowledge", "user-preferences", "detail")\`
-- After learning an important fact → \`memoryWrite("knowledge", "topic-name", "info")\`
-- When given a task for later → \`memoryWrite("tasks", "task-name", "description")\`
-
-**When to RECALL from memory:**
-- User says "remember when..." or references past work
-- You need context about a previous project
-- You want to check stored preferences
-- Before starting work similar to something done before
-
-**When to CAPTURE:**
-- Use \`memoryCapture\` to see the full memory directory tree
-- Useful before deciding what to read or when browsing stored knowledge
-
-**Rules:**
-- Always write memories after completing significant work
-- Memories are append-only — new entries don't overwrite old ones
-- Use kebab-case names: \`music-player\`, \`user-preferences\`
-- Set importance 1-10 (7+ for critical knowledge)
-- Link related memories via \`relations\` parameter
+## Long-Term Memory (.bubbles/memory/)
+- WRITE (after projects, new preferences, important facts): \`memoryWrite(type, name, content)\`
+- RECALL (user history, past projects): \`memoryRecall(keyword)\`
+- Types: projects, knowledge, tasks, episodic
+- Always append, never overwrite. Use kebab-case names.
 `.trim();
 }
 
@@ -120,24 +99,10 @@ You have a persistent memory system at \`.bubbles/memory/\`. Use it like a perso
 export function errorHandlingPrompt() {
   return `
 ## Error Recovery
-
-When a tool fails:
-1. Read the error — the fix is usually in the message
-2. Diagnose: path error? missing dep? syntax error? permission?
-3. Apply ONE targeted fix
-4. If that fails too, stop and report:
-   - What you tried
-   - The exact error
-   - Suggested next step
-
-Quick fixes:
-- "command not found" → install or use alternative
-- "ENOENT" → wrong path, verify with ls/find
-- "EACCES" → permissions, try chmod or sudo
-- Build errors → read error line, fix code, rebuild
-- "npm ERR!" → rm -rf node_modules && npm install
-
-Never silently ignore errors. Never retry without changes.
+1. Read error message carefully
+2. Apply ONE targeted fix (e.g. wrong path → use listDir, missing dep → npm install)
+3. If failure repeats, STOP and report: tried X, got Y error, suggest Z.
+4. Never silently ignore or endlessly retry identical actions.
 `.trim();
 }
 

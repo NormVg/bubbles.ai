@@ -20,22 +20,27 @@ export const visionAnalyzeTool = tool({
     path: z.string().describe('Absolute or workspace-relative path to the image file (e.g. workspace/screenshot.png)'),
     question: z.string().optional().describe('Specific question about the image (default: "Describe this image in detail.")'),
   }),
-  execute: async ({ path, question }) => {
+  execute: async ({ path: imagePath, question }) => {
     try {
+      // Guard against undefined path
+      if (!imagePath) {
+        return { error: 'Missing required "path" parameter. Provide the absolute or workspace-relative path to an image file.' };
+      }
+
       // Resolve path: try absolute first, then workspace-relative
-      let absPath = resolve(path);
+      let absPath = resolve(imagePath);
       if (!existsSync(absPath)) {
-        absPath = resolve(config.WORKING_DIR, path);
+        absPath = resolve(config.WORKING_DIR, imagePath);
       }
       if (!existsSync(absPath)) {
-        return { error: `Image file not found: ${path}` };
+        return { error: `Image file not found: ${imagePath}` };
       }
 
       // Guard: must be an image type
       const lowerPath = absPath.toLowerCase();
       const isImage = IMAGE_EXTENSIONS.some((ext) => lowerPath.endsWith(ext));
       if (!isImage) {
-        return { error: `File does not appear to be an image: ${path}. Supported: ${IMAGE_EXTENSIONS.join(', ')}` };
+        return { error: `File does not appear to be an image: ${imagePath}. Supported: ${IMAGE_EXTENSIONS.join(', ')}` };
       }
 
       const fileInfo = await stat(absPath);

@@ -13,10 +13,6 @@ import { createPlanTool, markStepTool } from './taskTools.js';
 import { webSearchTool, webScrapeTool } from './web.js';
 import { memoryReadTool, memoryWriteTool, memoryRecallTool, memoryListTool, memoryCaptureTool } from './memoryTools.js';
 import { visionAnalyzeTool } from './vision.js';
-import {
-  desktopScreenshotTool, desktopClickTool, desktopTypeTool,
-  desktopKeyTool, desktopScrollTool, desktopGetScreenInfoTool,
-} from './desktop.js';
 
 /** Core tools that are always available */
 export const coreTools = {
@@ -35,12 +31,6 @@ export const coreTools = {
   memoryList: memoryListTool,
   memoryCapture: memoryCaptureTool,
   visionAnalyze: visionAnalyzeTool,
-  desktopScreenshot: desktopScreenshotTool,
-  desktopClick: desktopClickTool,
-  desktopType: desktopTypeTool,
-  desktopKey: desktopKeyTool,
-  desktopScroll: desktopScrollTool,
-  desktopGetScreenInfo: desktopGetScreenInfoTool,
 };
 
 /**

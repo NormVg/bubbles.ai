@@ -8,7 +8,6 @@ import {
   memoryUsagePrompt,
   errorHandlingPrompt,
   responseFormattingPrompt,
-  desktopAutomationPrompt,
 } from './templates.js';
 import { buildSkillsPrompt } from '../core/skillLoader.js';
 import { initMemory, searchMemories, listMemories, readMemory } from '../core/memoryStore.js';
@@ -109,7 +108,6 @@ export async function buildSystemPrompt(context = {}) {
     memoryUsagePrompt(),
     errorHandlingPrompt(),
     responseFormattingPrompt(),
-    desktopAutomationPrompt(),
   ];
 
   // Inject skill summaries

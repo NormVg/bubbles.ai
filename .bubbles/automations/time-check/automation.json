@@ -4,13 +4,13 @@
     "type": "cron",
     "schedule": "*/2 * * * *"
   },
-  "task": "Get the current date and time and send it to the Discord channel. Use the getTime tool or shell command to get the current time and report it.",
+  "task": "Send the current date and time to Discord channel 1492596438952182005",
   "output": {
     "type": "discord",
-    "channelId": "123456789"
+    "channelId": "1492596438952182005"
   },
   "enabled": true,
-  "createdAt": "2026-04-17T21:05:01.317Z",
-  "lastRun": "2026-04-17T21:12:12.733Z",
-  "runCount": 4
+  "createdAt": "2026-04-17T21:18:07.042Z",
+  "lastRun": "2026-04-17T21:22:17.585Z",
+  "runCount": 2
 }

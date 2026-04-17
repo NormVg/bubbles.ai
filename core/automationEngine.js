@@ -270,7 +270,13 @@ async function executeAutomation(def, triggerContext = {}, dryRun = false) {
 
   try {
     const result = await runAgent(taskPrompt, {
-      extraContext: `This is an automated task named "${def.name}". ${def.description || ''}. Deliver a concise result.`,
+      extraContext: `This is an automated background task named "${def.name}".
+CRITICAL AUTOMATION RULES:
+1. Your final text output will be AUTOMATICALLY delivered to the Discord channel.
+2. DO NOT attempt to find or use a tool to send messages to Discord yourself.
+3. Simply gather the requested information and format it nicely in your final response.
+4. Do not use emojis in your text output unless explicitly asked to. Use professional formatting.
+Description of this task: ${def.description || ''}`,
     });
 
     const durationMs = Date.now() - startTime;
@@ -313,7 +319,7 @@ async function sendToDiscord(def, text) {
       return;
     }
 
-    const header = `🤖 **Automation: ${def.name}**\n`;
+    const header = `**Automation: ${def.name}**\n`;
     const content = header + (text || '(no output)');
 
     // Split if too long

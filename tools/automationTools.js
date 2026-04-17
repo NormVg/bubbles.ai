@@ -25,7 +25,7 @@ import {
 import logger from '../core/logger.js';
 
 // ── createAutomation ─────────────────────────────────────────────
-export const createAutomationTool = tool({
+export const createAutomationToolFactory = (channelId) => tool({
   description:
     'Create a persistent automation in ONE call. Do NOT create workspace folders, scripts, or files — ' +
     'this tool handles everything internally. The "task" parameter is a natural language prompt that the ' +
@@ -43,9 +43,8 @@ export const createAutomationTool = tool({
       'The FULL task prompt the agent executes when triggered. Be detailed and specific. ' +
       'Example: "Search for the current Nifty 50 price using webSearch, then send me a 3-line summary with the price, change, and trend."'
     ),
-    channelId: z.string().describe('Discord channel ID where results should be sent'),
   }),
-  execute: async ({ name, description, triggerType, schedule, minutes, watchPath, task, channelId }) => {
+  execute: async ({ name, description, triggerType, schedule, minutes, watchPath, task }) => {
     // Validate triggerType
     if (!triggerType || !['cron', 'interval', 'watch'].includes(triggerType)) {
       return { success: false, error: `Invalid triggerType "${triggerType}". Must be one of: cron, interval, watch.` };
@@ -84,7 +83,7 @@ export const createAutomationTool = tool({
           enabled: def.enabled,
           createdAt: def.createdAt,
         },
-        message: `✅ Automation "${name}" created and scheduled! It will fire based on the ${triggerType} trigger and send results to the configured Discord channel.`,
+        message: `[Success] Automation "${name}" created and scheduled! It will fire based on the ${triggerType} trigger and send results to the current Discord channel.`,
       };
     } catch (err) {
       return { success: false, error: `Failed to create automation: ${err.message}` };

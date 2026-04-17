@@ -198,9 +198,13 @@ export async function runAgent(userMessage, context = {}) {
               if (toolResults?.length) {
                 for (const res of toolResults) {
                   let outStr = typeof res.result === 'object' ? JSON.stringify(res.result) : String(res.result || 'Executed');
-                  outStr = outStr.replace(/\n/g, ' ').slice(0, 80);
-                  taskManager.logTool(res.toolName, outStr + (outStr.length >= 80 ? '...' : ''));
-                  logger.info('ToolOutput', `[${res.toolName}] => ${outStr}${outStr.length >= 80 ? '...' : ''}`);
+                  outStr = outStr.replace(/\n/g, ' ');
+                  // Vision tool gets full output; other tools stay compact
+                  const maxLen = res.toolName === 'visionAnalyze' ? 500 : 80;
+                  const truncated = outStr.slice(0, maxLen);
+                  const suffix = outStr.length > maxLen ? '...' : '';
+                  taskManager.logTool(res.toolName, truncated + suffix);
+                  logger.info('ToolOutput', `[${res.toolName}] => ${truncated}${suffix}`);
                 }
               }
 

@@ -139,8 +139,8 @@ You can control the user's real desktop — their actual screen, mouse, keyboard
 
 **ALWAYS follow this perception loop:**
 1. \`desktopScreenshot\` → capture current screen state
-2. \`visionAnalyze\` on the screenshot → see what is on screen, identify coordinates
-3. \`desktopClick\` / \`desktopType\` / \`desktopKey\` → take ONE action
+2. \`visionAnalyze\` on the screenshot → **ALWAYS pass a specific \`question\` describing what you are looking for** (e.g. "Where is the Post button? Give me its exact (X, Y) coordinates." or "Is Spotlight search open? What text is visible?"). NEVER call visionAnalyze without a targeted objective.
+3. \`desktopClick\` / \`desktopType\` / \`desktopKey\` → take ONE action based on the vision response
 4. \`desktopScreenshot\` → verify the action worked
 5. Repeat until the goal is reached
 
@@ -153,6 +153,7 @@ You can control the user's real desktop — their actual screen, mouse, keyboard
 - **CRITICAL: You are on macOS.** NEVER use \`cmd\` or \`win\` as a key name. You MUST use \`command\` natively in PyAutoGUI. Other valid macOS modifiers are \`option\`, \`control\`, \`shift\`.
 - NEVER guess keyboard shortcut names without verifying PyAutoGUI docs.
 - NEVER guess coordinates — always screenshot first and use visionAnalyze to find elements
+- NEVER call visionAnalyze without a targeted question — blind scans waste time and tokens
 - Take ONE action per step, then verify with another screenshot
 - Use \`desktopGetScreenInfo\` if you need screen dimensions
 - For slow apps, add a brief shell sleep between action and verification screenshot

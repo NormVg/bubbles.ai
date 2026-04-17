@@ -13,10 +13,15 @@ def screenshot(output_path=None, region=None):
     """Take a screenshot and save it to a file."""
     if output_path is None:
         timestamp = time.strftime("%Y%m%d_%H%M%S")
-        output_path = f"screenshot_{timestamp}.png"
+        output_path = f"screenshot_{timestamp}.jpg"
 
     img = pyautogui.screenshot(region=region)
-    img.save(output_path)
+    if output_path.lower().endswith(".jpg") or output_path.lower().endswith(".jpeg"):
+        img = img.convert("RGB")
+        # Save highly compressed JPEG to speed up vision model processing
+        img.save(output_path, "JPEG", quality=60, optimize=True)
+    else:
+        img.save(output_path)
     return {"success": True, "path": str(Path(output_path).resolve())}
 
 

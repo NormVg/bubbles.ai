@@ -49,10 +49,10 @@ function runDesktop(action, args = []) {
 // ── Screenshot ──────────────────────────────────────────────────
 export const desktopScreenshotTool = tool({
   description:
-    'Take a screenshot of the current screen. Returns the file path to the saved PNG. ' +
+    'Take a screenshot of the current screen. Returns the file path to the saved JPEG. ' +
     'Use this as the first step in any desktop automation task to see what is on screen.',
   parameters: z.object({
-    output: z.string().optional().describe('Output file path (default: auto-generated in /tmp)'),
+    output: z.string().optional().describe('Output file path (default: auto-generated in /tmp as .jpg)'),
     region: z.string().optional().describe('Capture a region: "x,y,width,height" (e.g. "0,0,800,600")'),
   }),
   execute: async ({ output, region }) => {

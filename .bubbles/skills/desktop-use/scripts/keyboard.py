@@ -26,7 +26,8 @@ def press_key(key):
 
 def hotkey(*keys):
     """Press a key combination simultaneously (e.g. 'ctrl', 'c')."""
-    pyautogui.hotkey(*keys)
+    mapped_keys = ['command' if k in ['cmd', 'win'] else k for k in keys]
+    pyautogui.hotkey(*mapped_keys)
     return {"success": True, "action": "hotkey", "keys": list(keys)}
 
 

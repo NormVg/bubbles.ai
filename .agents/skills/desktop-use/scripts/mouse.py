@@ -14,7 +14,7 @@ def click(x, y, button="left", clicks=1, interval=0.0):
 
 def double_click(x, y, button="left"):
     """Double-click at (x, y)."""
-    pyautogui.doubleClick(x=x, y=y, button=button)
+    pyautogui.doubleClick(x=x, y=y, button=button, interval=0.1)
     return {"success": True, "action": "double_click", "x": x, "y": y}
 
 
@@ -62,5 +62,6 @@ def scroll(amount, x=None, y=None):
     """
     if x is not None and y is not None:
         pyautogui.moveTo(x=x, y=y)
+        import time; time.sleep(0.05)  # Let cursor settle before scrolling
     pyautogui.scroll(amount)
     return {"success": True, "action": "scroll", "amount": amount}

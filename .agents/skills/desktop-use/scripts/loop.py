@@ -18,7 +18,7 @@ Usage:
 
 Plan JSON format:
     [
-      {"action": "hotkey", "keys": "cmd,space"},
+      {"action": "hotkey", "keys": "command,space"},
       {"action": "sleep", "seconds": 0.5},
       {"action": "type_text", "text": "Terminal"},
       {"action": "press_key", "key": "enter"},

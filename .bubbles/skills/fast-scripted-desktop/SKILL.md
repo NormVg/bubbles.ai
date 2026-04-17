@@ -70,6 +70,7 @@ Do not write one monolithic script that relies on blind luck. UIs are dynamic an
 **ROBUST PATTERNS:**
 - ✅ **Use App Hotkeys:** Pressing `command+enter` to post/submit is universally supported and 100x safer than tabbing.
 - ✅ **Dynamic Verification:** Use `pyautogui.pixelMatchesColor()` to check if a UI state is ready (e.g., button turned blue).
+- ✅ **Dynamic Loading Checks:** After an action causes navigation or loading, NEVER assume `time.sleep(5)` guarantees the page loaded. You must either dynamically wait for a pixel color/state, or immediately end the script phase and use `desktopScreenshot` to verify layout visually.
 - ✅ **Micro-Scripts / Checkpoints:** For complex multi-step flows, write Phase 1 (`script_p1_open.py`), run it, take a screenshot manually using `desktopScreenshot` tool to verify the state and grab the new precise coordinates, and THEN write Phase 2 (`script_p2_click.py`).
 
 - Run your script using the `shell` tool: `python3 run_automation.py`.

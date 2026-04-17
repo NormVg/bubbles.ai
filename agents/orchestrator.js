@@ -182,7 +182,7 @@ export async function runAgent(userMessage, context = {}) {
           stopWhen: stepCountIs(maxStepsPerPlanStep),
           onStepFinish: (stepData) => {
             totalStepCount++;
-            const { toolCalls } = stepData;
+            const { toolCalls, toolResults } = stepData;
 
             if (toolCalls?.length) {
               allToolCalls.push(
@@ -191,6 +191,14 @@ export async function runAgent(userMessage, context = {}) {
                   args: tc.args,
                 }))
               );
+            }
+
+            if (toolResults?.length) {
+              for (const res of toolResults) {
+                let outStr = typeof res.result === 'object' ? JSON.stringify(res.result) : String(res.result || 'Executed');
+                outStr = outStr.replace(/\n/g, ' ').slice(0, 80);
+                taskManager.logTool(res.toolName, outStr + (outStr.length >= 80 ? '...' : ''));
+              }
             }
 
             if (context.onStep) {

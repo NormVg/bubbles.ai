@@ -30,6 +30,14 @@ class TaskManager {
     this.activePlanId = null;
     this._currentQuery = null;
     this._onUpdate = null;
+    this.recentToolLogs = [];
+  }
+
+  logTool(toolName, outputStr) {
+    const line = `> 🛠 \`${toolName}\` → ${outputStr}`;
+    this.recentToolLogs.push(line);
+    if (this.recentToolLogs.length > 4) this.recentToolLogs.shift();
+    this._notifyUpdate(this.getActivePlan());
   }
 
   /**
@@ -145,14 +153,20 @@ class TaskManager {
     if (doneCount === total) statusLabel = '`STATUS: COMPLETE`';
     else if (failedCount > 0) statusLabel = '`STATUS: IN PROGRESS (errors)`';
 
-    return [
+    const outputLines = [
       `**\`TASK PROGRESS\`**`,
       ``,
       lines.join('\n'),
       ``,
       `\`${bar}\`  ${doneCount}/${total} (${progress}%)`,
       statusLabel,
-    ].join('\n');
+    ];
+
+    if (this.recentToolLogs.length > 0 && doneCount !== total) {
+      outputLines.push(``, `**\`LATEST TOOL OUTPUT\`**`, ...this.recentToolLogs);
+    }
+
+    return outputLines.join('\n');
   }
 
   /**

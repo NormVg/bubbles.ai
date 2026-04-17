@@ -64,8 +64,8 @@ export function toolUsagePrompt() {
 
 **Execution / Tasks (Crucial Distinction):**
 - \`shell\` — For **short, blocking** commands (creating folders, git, npm install, short scripts). The conversation waits for this to finish.
-- \`bgRun\` — For **long-running, continuous** tasks (dev servers, file watchers, web servers). This spawns a detached process and returns a Job ID immediately so the conversation can continue.
-  - *Example*: \`bgRun({ command: "npm run dev", cwd: "./workspace/my-app", label: "Vite Server" })\`
+- \`bgRun\` — For **long-running continuous servers** (e.g., node servers, Vite). This spawns a detached process.
+  - NEVER use \`bgRun\` + shell loops for recurring interval tasks (like "do x every 3 mins"). For recurring schedules, ALWAYS use \`createAutomation\`.
 - \`bgList\` — View running background processes.
 - \`bgRead(jobId)\` — Tail the recent logs/output of a background process.
 - \`bgKill(jobId)\` — Stop a background process.
@@ -96,7 +96,7 @@ export function toolUsagePrompt() {
 **Automation (Persistent Scheduled Tasks):**
 - \`createAutomation\` — **ONE tool call** to set up a recurring task. Do NOT create folders, scripts, or files — the tool handles everything.
   - The \`task\` param is the full natural-language prompt the agent executes each time
-  - Example: \`createAutomation({ name: "stock-report", triggerType: "cron", schedule: "0 9 * * *", task: "Search for Nifty 50 price and send a summary", channelId: "123" })\`
+  - Example: \`createAutomation({ name: "stock-report", triggerType: "cron", schedule: "0 9 * * *", task: "Search for Nifty 50 price and send a summary" })\`
 - \`listAutomations\` — see all automations and their run counts
 - \`toggleAutomation\` / \`removeAutomation\` — manage automations
 - \`triggerAutomation\` — manually fire one for testing

@@ -15,6 +15,10 @@ import { memoryReadTool, memoryWriteTool, memoryRecallTool, memoryListTool, memo
 import { visionAnalyzeTool } from './vision.js';
 import { bgRunTool, bgListTool, bgReadTool, bgKillTool } from './bgProcess.js';
 import { forgeToolTool, listForgedTool, removeForgedTool, loadCustomTools, getCustomTools } from './toolForge.js';
+import {
+  createAutomationTool, listAutomationsTool, toggleAutomationTool,
+  removeAutomationTool, triggerAutomationTool,
+} from './automationTools.js';
 
 /** Core tools that are always available */
 export const coreTools = {
@@ -39,6 +43,11 @@ export const coreTools = {
   forgeTool: forgeToolTool,
   listForged: listForgedTool,
   removeForged: removeForgedTool,
+  createAutomation: createAutomationTool,
+  listAutomations: listAutomationsTool,
+  toggleAutomation: toggleAutomationTool,
+  removeAutomation: removeAutomationTool,
+  triggerAutomation: triggerAutomationTool,
 };
 
 /**

@@ -93,6 +93,16 @@ export function toolUsagePrompt() {
 - \`memoryList\` — browse available memories by category
 - \`memoryCapture\` — get ASCII tree of the entire memory directory
 
+**Automation (Persistent Scheduled Tasks):**
+- \`createAutomation\` — create a recurring task (cron/interval/file-watcher). Runs through the full agent with all tools. Auto-tests after creation.
+- \`listAutomations\` — see all automations and their run counts
+- \`toggleAutomation\` / \`removeAutomation\` — manage automations
+- \`triggerAutomation\` — manually fire one for testing
+
+**Self-Evolution:**
+- \`forgeTool\` — create a reusable custom tool (script-backed, persists to disk)
+- \`listForged\` / \`removeForged\` — manage custom tools
+
 **Anti-patterns:**
 - Describing actions instead of executing them
 - Writing files outside ./workspace/

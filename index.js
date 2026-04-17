@@ -20,6 +20,7 @@ import taskManager from './core/taskManager.js';
 import logger from './core/logger.js';
 import { getHistory, addToHistory, loadPersistedHistory } from './core/chatHistory.js';
 import { logInteraction } from './core/interactionLog.js';
+import { startAutomationEngine } from './core/automationEngine.js';
 
 const execAsync = promisify(exec);
 let activeTerminal = null;
@@ -235,6 +236,9 @@ client.once('clientReady', async () => {
 
   console.log('\n\x1b[36m%s\x1b[0m', banner);
   logger.info('Discord', '── Agent ready ──');
+
+  // Start automation engine after bot is ready
+  startAutomationEngine(client);
 });
 
 // ── @Mention Chat Handler ──────────────────────────────────────

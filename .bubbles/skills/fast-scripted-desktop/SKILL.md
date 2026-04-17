@@ -14,7 +14,7 @@ This approach is exponentially faster when you know exactly what UI elements to 
 ### 1. Vision & Coordinate Calibration
 If you do not know the coordinates of the buttons/inputs you need to interact with:
 - First take a **single baseline screenshot** (`desktopScreenshot` tool).
-- Analyze the screenshot (`visionAnalyze` tool) to estimate the (X, Y) coordinates of the actionable elements (search bars, buttons, menus).
+- Analyze the screenshot (`visionAnalyze` tool). **ALWAYS pass a specific `question` parameter** (e.g. "What are the exact (X,Y) coordinates of the 'Log In' button?"). Never run a blind analysis without a targeted question.
 
 ### 2. Script Generation
 Write a Python script locally in the workspace (e.g., `automation_script.py`).

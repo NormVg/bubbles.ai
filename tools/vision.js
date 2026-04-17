@@ -18,7 +18,7 @@ export const visionAnalyzeTool = tool({
     'Provide an absolute or workspace-relative path to the image file.',
   parameters: z.object({
     path: z.string().describe('Absolute or workspace-relative path to the image file (e.g. workspace/screenshot.png)'),
-    question: z.string().optional().describe('Specific question about the image (default: "Describe this image in detail.")'),
+    question: z.string().optional().describe('A HIGHLY SPECIFIC request for what you need to extract (e.g., "Find the exact (X, Y) coordinates of the Twitter Post button"). DO NOT leave this blank; blind generic analysis is slow and useless.'),
   }),
   execute: async ({ path: imagePath, question }) => {
     try {

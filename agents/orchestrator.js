@@ -198,6 +198,7 @@ export async function runAgent(userMessage, context = {}) {
                 let outStr = typeof res.result === 'object' ? JSON.stringify(res.result) : String(res.result || 'Executed');
                 outStr = outStr.replace(/\n/g, ' ').slice(0, 80);
                 taskManager.logTool(res.toolName, outStr + (outStr.length >= 80 ? '...' : ''));
+                logger.info('ToolOutput', `[${res.toolName}] => ${outStr}${outStr.length >= 80 ? '...' : ''}`);
               }
             }
 

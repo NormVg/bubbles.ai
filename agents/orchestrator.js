@@ -146,6 +146,7 @@ export async function runAgent(userMessage, context = {}) {
     extraContext: context.extraContext || null,
     userQuery: userMessage,
     skills,
+    channelId: context.channelId,
   });
 
   // Max tool-call steps PER plan step (prevent infinite loops)

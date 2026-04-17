@@ -304,6 +304,7 @@ client.on('messageCreate', async (message) => {
       extraContext,
       visionFiles,
       history,
+      channelId: message.channel.id,
       onStep: () => {
         // Keep typing indicator alive during multi-step operations
         message.channel.sendTyping().catch(() => { });

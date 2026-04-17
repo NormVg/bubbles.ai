@@ -121,6 +121,15 @@ export async function buildSystemPrompt(context = {}) {
     sections.push(systemContext);
   }
 
+  // Inject current environment context
+  if (context.channelId) {
+    sections.push(`
+## Current Environment
+**Discord Channel ID**: \`${context.channelId}\`
+Use this ID whenever a tool requires a channelId to deliver results back to the user.
+    `.trim());
+  }
+
   // Inject relevant memories from long-term storage
   const memoryContext = await loadMemoryContext(context.userQuery);
   if (memoryContext) {

@@ -29,7 +29,7 @@ Write a Python script locally in the workspace (e.g., `automation_script.py`).
 - **Visual Intelligence**: Sub-skills for robust state verification:
   - `pyautogui.pixelMatchesColor(x, y, (R, G, B), tolerance=10)` to check if a checkbox is checked, a button is enabled, a theme is dark, etc.
   - `pyautogui.locateCenterOnScreen('reference.png', confidence=0.8)` to find dynamic visual elements if you have created a reference crop image. (Requires `pyscreeze` / `opencv-python` depending on confidence).
-- Ensure macOS keys are mapped (`command` instead of `cmd`).
+- **CRITICAL: You are on macOS.** NEVER use `cmd` or `win` as a modifier key. You MUST use `command` (e.g. `pyautogui.hotkey('command', 'c')`). Other valid keys are `option`, `control`, `shift`. NEVER guess keyboard key strings without checking PyAutoGUI docs.
 
 **Example Script (`run_automation.py`):**
 ```python

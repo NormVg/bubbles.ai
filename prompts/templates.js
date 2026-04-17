@@ -145,11 +145,13 @@ You can control the user's real desktop — their actual screen, mouse, keyboard
 5. Repeat until the goal is reached
 
 **For browser automation, use the user's REAL browser (Zen), NOT headless Puppeteer:**
-- \`desktopKey\` with combo \`cmd,space\` → opens Spotlight
+- \`desktopKey\` with combo \`command,space\` → opens Spotlight
 - \`desktopType\` "Zen" → \`desktopKey\` "enter" → opens browser
 - Then navigate via URL bar or click on page elements
 
 **Rules:**
+- **CRITICAL: You are on macOS.** NEVER use \`cmd\` or \`win\` as a key name. You MUST use \`command\` natively in PyAutoGUI. Other valid macOS modifiers are \`option\`, \`control\`, \`shift\`.
+- NEVER guess keyboard shortcut names without verifying PyAutoGUI docs.
 - NEVER guess coordinates — always screenshot first and use visionAnalyze to find elements
 - Take ONE action per step, then verify with another screenshot
 - Use \`desktopGetScreenInfo\` if you need screen dimensions

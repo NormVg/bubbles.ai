@@ -14,6 +14,7 @@ import { webSearchTool, webScrapeTool } from './web.js';
 import { memoryReadTool, memoryWriteTool, memoryRecallTool, memoryListTool, memoryCaptureTool } from './memoryTools.js';
 import { visionAnalyzeTool } from './vision.js';
 import { bgRunTool, bgListTool, bgReadTool, bgKillTool } from './bgProcess.js';
+import { forgeToolTool, listForgedTool, removeForgedTool, loadCustomTools, getCustomTools } from './toolForge.js';
 
 /** Core tools that are always available */
 export const coreTools = {
@@ -35,6 +36,9 @@ export const coreTools = {
   bgList: bgListTool,
   bgRead: bgReadTool,
   bgKill: bgKillTool,
+  forgeTool: forgeToolTool,
+  listForged: listForgedTool,
+  removeForged: removeForgedTool,
 };
 
 /**
@@ -52,8 +56,15 @@ export function buildTools(options = {}) {
     tools.loadSkill = createLoadSkillTool(options.skills);
   }
 
+  // Merge any custom tools created via forgeTool
+  const custom = getCustomTools();
+  Object.assign(tools, custom);
+
   return tools;
 }
+
+// Re-export for startup wiring
+export { loadCustomTools };
 
 // Default export for backward compat (static tools only)
 export const allTools = coreTools;

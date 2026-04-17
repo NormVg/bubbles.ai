@@ -1,6 +1,6 @@
 import { generateText, stepCountIs } from 'ai';
 import { getModel, getVisionModel } from '../core/provider.js';
-import { buildTools } from '../tools/index.js';
+import { buildTools, loadCustomTools } from '../tools/index.js';
 import { buildSystemPrompt } from '../prompts/system.js';
 import { discoverSkills } from '../core/skillLoader.js';
 import taskManager from '../core/taskManager.js';
@@ -113,6 +113,7 @@ export async function runAgent(userMessage, context = {}) {
   }
 
   const skills = await ensureSkillsDiscovered();
+  loadCustomTools();  // Load any previously forged custom tools
   const tools = buildTools({ skills });
 
   logger.info('Orchestrator', `Processing query: "${userMessage?.slice(0, 100) || 'Image provided'}..."`);
